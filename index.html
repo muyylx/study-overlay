@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#11121f"><meta name="description" content="Учебный помощник для Safari: мгновенный офлайн-разбор и необязательная лёгкая модель.">
+<link rel="stylesheet" href="styles.css?v=2"><link rel="manifest" href="manifest.webmanifest"><title>Study Overlay Lite</title>
+</head><body>
+<main class="app-shell">
+  <header class="topbar">
+    <div class="brand-mark">S</div><div class="brand-copy"><div class="brand-title">STUDY OVERLAY <span class="version">LITE 2</span></div><div class="brand-subtitle">Быстрый режим работает без загрузок</div></div>
+    <button id="collapseBtn" class="icon-button" title="Свернуть" aria-label="Свернуть">−</button><button id="closeBtn" class="icon-button" title="Закрыть" aria-label="Закрыть">×</button>
+  </header>
+  <div class="status-row"><span class="status-dot ready" id="statusDot"></span><span id="statusText">Быстрый режим готов</span><span class="runtime-pill">OFFLINE</span></div>
+  <div class="hero-card"><div class="hero-title">Разбор задания</div><p>Никаких 786 МБ и обязательной ИИ-модели. Сначала попробуй быстрый разбор, а для сложного вопроса используй компактный ИИ или скопируй текст.</p></div>
+  <section class="capture-row"><div><div class="section-title">Вопрос со страницы</div><div class="section-caption">Считывается только текст, доступный Safari</div></div><button id="readPageBtn" class="secondary-button">Считать страницу</button></section>
+  <label class="field-label" for="questionInput">ВОПРОС И ВАРИАНТЫ</label><textarea id="questionInput" rows="5" placeholder="Нажми «Считать страницу» или вставь вопрос сюда…" spellcheck="false"></textarea>
+  <div class="action-row"><button id="solveBtn" class="primary-button solve">Разобрать без ИИ</button><button id="copyQuestionBtn" class="secondary-button">Копировать</button><button id="clearBtn" class="secondary-button clear">×</button></div>
+  <section class="answer-card" id="answerCard" hidden><div class="answer-heading"><span class="answer-icon">✦</span><span id="answerTitle">РАЗБОР</span><button id="copyAnswerBtn" class="copy-button">Копировать</button></div><div id="answerText" class="answer-text"></div></section>
+  <details class="model-card" id="modelDetails"><summary><span><span class="eyebrow">ДОПОЛНИТЕЛЬНО · ЭКСПЕРИМЕНТ</span><strong>Компактный ИИ на устройстве</strong><small>SmolLM2 135M · Q4 · ≈182 МБ модель</small></span><span class="chevron">⌄</span></summary><div class="model-body">
+    <p class="model-note">На iPhone 11 всё ещё возможен вылет. Эта модель существенно меньше прежней, но слабее в русском, украинском и сложных заданиях. Не загружается автоматически. После скачивания вычисления выполняются локально; библиотека и файлы модели загружаются из сети.</p>
+    <div class="progress-track"><div id="progressBar" class="progress-fill"></div></div><div class="progress-caption" id="progressText">Модель не загружена</div>
+    <div class="action-row"><button class="secondary-button" id="loadBtn">Попробовать загрузить</button><button class="secondary-button" id="stopBtn" disabled>Остановить</button></div>
+    <button class="primary-button model-solve" id="modelSolveBtn" disabled>Разобрать с компактным ИИ</button>
+  </div></details>
+  <footer class="footer-note">Это инструмент для обучения, а не гарантия правильных ответов. Не читает текст с картинок, canvas или закрытых iframe. Не нажимает кнопки на учебном сайте.</footer>
+</main><script type="module" src="app.js?v=2"></script>
+</body></html>
