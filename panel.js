@@ -33,7 +33,7 @@ async function send(question){
  if(busy)return;if(!question&&!image){msg('Не удалось прочитать вопрос. Прикрепи скриншот через скрепку.');return;}
  busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
  try{const response=await request('/ask','POST',{question:question||'Разбери задание на изображении. Ответь кратко и объясни.',image:image||undefined});$('answer').textContent=response.answer;await refresh();}
- catch(e){$('answer').textContent='Ошибка: '+e.message;if(e.status===401||e.status===403)clear();}
+ catch(e){$('answer').textContent='Не удалось получить ответ. Попробуй ещё раз или прикрепи скриншот 📎';if(e.status===401||e.status===403)clear();}
  finally{busy=false;$('scan').disabled=false;}
 }
 $('scan').addEventListener('click',()=>{
