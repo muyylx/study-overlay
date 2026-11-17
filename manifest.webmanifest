@@ -1,9 +1,0 @@
-{
-  "name": "Study Overlay",
-  "short_name": "Study",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#11101b",
-  "theme_color": "#171525",
-  "description": "Локальный учебный помощник для Safari"
-}
