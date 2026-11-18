@@ -40,6 +40,33 @@ bar.addEventListener('pointerdown',e=>{if(e.target.closest('button,a'))return;st
 bar.addEventListener('pointermove',e=>{if(!start)return;h.style.setProperty('left',start.left+e.clientX-start.x+'px','important');h.style.setProperty('top',start.top+e.clientY-start.y+'px','important');place();});
 bar.addEventListener('pointerup',()=>{start=null;});bar.addEventListener('pointercancel',()=>{start=null;});
 function visible(el){if(!el||!el.getClientRects().length)return false;const r=el.getBoundingClientRect(),v=getComputedStyle(el);return r.top<innerHeight&&r.bottom>0&&r.left<innerWidth&&r.right>0&&v.display!=='none'&&v.visibility!=='hidden'&&!!el.closest('body');}
+function readTopic(){
+  const brand=/^(?:на\s*урок|naurok(?:\.com)?(?:\.ua)?|google forms|google форми|kahoot!?|quizizz|wayground|moodle|онлайн[- ]тест(?:ування)?|тестування|тест|тест на урок|виконання тесту|проходження тесту|тестування учнів|вхід|quiz|join a game|test|untitled form|без названия|без назви)$/iu;
+  function usable(raw){
+    const text=String(raw||'').replace(/\s+/gu,' ').trim();
+    if(text.length<3 || text.length>220)return '';
+    const chunks=text.split(/\s*[|｜]\s*|\s+[–—-]\s+/u);
+    const generic=v=>brand.test(v)||/^(?:тести? онлайн|онлайн[- ]тести|онлайн[- ]тестування|проходження тесту|тестування)(?:\s+(?:на|від))?\s*[«"“]?на\s*урок[»"”]?$/iu.test(v)||/^(?:виконати|пройти|почати|начать|пройти) тест|^(?:тестування онлайн|онлайн тестування|тести онлайн|онлайн[- ]тести|тести|тесты|гра|результати тесту|kahoot! play|google форми|google формы|test your knowledge)$/iu.test(v);
+    const parts=chunks.filter(v=>!generic(v));
+    const name=parts.join(' — ').replace(/^(?:тема(?: тест[ау])?|назва тесту|название теста|quiz title)\s*[:：]\s*/iu,'').trim();
+    if(!name||generic(name)||name.length>180||/^(?:питання|запитання|вопрос|question)\s*(?:№|#)?\s*\d|[?？]$|^\d+\s*\/\s*\d+$|https?:\/\//iu.test(name))return '';
+    return /[\p{L}]/u.test(name)?name:'';
+  }
+  for(const el of document.querySelectorAll('[data-quiz-title],[data-test-title],.quiz-title,.test-title,[data-testid="quiz-title"],[data-testid="test-title"],[itemprop="educationalAlignment"] [itemprop="targetName"]')){
+    const t=usable(el.getAttribute('data-quiz-title')||el.getAttribute('data-test-title')||el.textContent);if(t)return t;
+  }
+  for(const el of document.querySelectorAll('h1,h2,h3,legend')){
+    const raw=el.innerText||'';
+    if(!el.closest('[hidden],[aria-hidden=true]')&&/^(?:тема(?: тест[ау])?|назва тесту|название теста|quiz title)\s*[:：]/iu.test(raw.trim())){
+      const t=usable(raw);if(t)return t;
+    }
+  }
+  for(const raw of [document.querySelector('meta[property="og:title"]')?.content,document.title]){
+    const t=usable(raw);if(t)return t;
+  }
+  return '';
+}
+function pageTopic(){try{return readTopic();}catch{return '';}}
 function read(){const selected=String(getSelection()?.toString()||'').trim();if(selected.length>2)return selected.slice(0,6500);const seen=new Set(),qs=[],as=[],groups=new Set();
 for(const el of document.querySelectorAll('[data-testid*="question"],[class*="question-title"],[class*="questionTitle"],[class*="question-text"],[id*="question"],h1,h2,legend')){if(qs.length>=3)break;if(!visible(el)||el.closest('nav,header,footer,aside'))continue;if(el.querySelector('math,.katex,mjx-container,sup,sub,img,svg,canvas'))return '';const t=String(el.innerText||el.textContent||'').replace(/\s+/g,' ').trim();if(el.matches('h1,h2')&&!el.closest('[class*="question"],[id*="question"],[data-testid*="question"]')&&!/^\s*[-+(\d][\d\s(),.+/−–—-]*[+−–—-]\s*[-(\d][\d\s(),.+/−–—-]*$/.test(t)&&!/[?？=]|підрядн|сполучн|виділене слово|обчисл|вибер|визнач|укаж|вкаж|оберіть|обери|познач|установ|встанов|розташ|зістав|зазнач|назвіть|определи|укажи|укажите|сопостав|перечисл|сколько|найди|выбер|назови|calculate|which|choose/i.test(t))continue;if(t.length<3||t.length>1000||seen.has(t))continue;seen.add(t);qs.push(t);const group=el.closest("fieldset");if(group)groups.add(group);}
 for(const el of document.querySelectorAll('[data-testid*="answer"],[class*="answer-option"],button,[role="button"],[role="radio"],[role="checkbox"],label')){if(el.matches('label')&&!el.control?.matches('input[type="radio"],input[type="checkbox"]'))continue;if(as.length>=32)return '';const isOption=el.matches('[data-testid*="answer"],[class*="answer-option"],[role="radio"],[role="checkbox"],label');
@@ -58,7 +85,7 @@ fallback.textContent='Панель не загрузилась. Сделай с�
 const link=document.createElement('a');link.textContent='открой разбор фото';link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.style.color='#b6caff';fallback.append(link);
 const timer=setTimeout(()=>{s.append(fallback);frame.hidden=true;frame.style.display='none';},8000);
 
-const onMsg=e=>{if(!h.isConnected){removeEventListener('message',onMsg);return;}if(e.source!==frame.contentWindow||e.origin!==origin||!e.data)return;if(e.data.type==='STUDY_PANEL_READY'){clearTimeout(timer);fallback.remove();frame.style.display='';frame.hidden=false;}if(e.data.type==='STUDY_OVERLAY_READ_PAGE'){let text='';try{text=read();}catch{}frame.contentWindow.postMessage({type:'STUDY_OVERLAY_PAGE_TEXT',text},origin);}else if(e.data.type==='STUDY_OVERLAY_HIDE_PANEL'&&!frame.classList.contains('hidden'))shrink();};
+const onMsg=e=>{if(!h.isConnected){removeEventListener('message',onMsg);return;}if(e.source!==frame.contentWindow||e.origin!==origin||!e.data)return;if(e.data.type==='STUDY_PANEL_READY'){clearTimeout(timer);fallback.remove();frame.style.display='';frame.hidden=false;frame.contentWindow.postMessage({type:'STUDY_OVERLAY_TOPIC',topic:pageTopic()},origin);}if(e.data.type==='STUDY_OVERLAY_READ_PAGE'){let text='';try{text=read();}catch{}frame.contentWindow.postMessage({type:'STUDY_OVERLAY_PAGE_TEXT',text,topic:pageTopic()},origin);}else if(e.data.type==='STUDY_OVERLAY_HIDE_PANEL'&&!frame.classList.contains('hidden'))shrink();};
 addEventListener('message',onMsg);
 (document.body||document.documentElement).appendChild(h);place();
 }

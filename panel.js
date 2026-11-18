@@ -46,11 +46,23 @@ window.addEventListener('message',async event=>{
 });
 $('disconnect').addEventListener('click',()=>{clear();msg('Панель отключена. Аккаунт на основном сайте сохранён.');});
 async function refresh(){try{await validate();}catch(e){if(e.status===401)clear();msg(e.message);}}
-const lessonFields={grade:'Класс',subject:'Предмет',topic:'Тема или произведение'};
-function clearLesson(){if($('selection'))$('selection').value='auto';for(const key of Object.keys(lessonFields))$(key).value='';}
+const lessonFields={grade:'Класс',subject:'Предмет',topic:'Тема'};
+let detectedTopic='';
+function topicValue(){return $('topic').value.trim()||detectedTopic;}
+function showTopic(){ $('topicStatus').textContent='Тема: '+(topicValue()||'не найдено'); }
+function setDetectedTopic(value){
+ detectedTopic=typeof value==='string'?value.replace(/\s+/gu,' ').trim().slice(0,180):'';
+ showTopic();
+}
+$('topic').addEventListener('input',showTopic);
+window.addEventListener('message',event=>{
+ if(!parentOrigin||event.origin!==parentOrigin||event.source!==window.parent||window===window.parent)return;
+ if(event.data?.type==='STUDY_OVERLAY_TOPIC')setDetectedTopic(event.data.topic);
+});
+function clearLesson(){if($('selection'))$('selection').value='auto';for(const key of Object.keys(lessonFields))$(key).value='';showTopic();}
 $('clearLesson').addEventListener('click',clearLesson);
 function withLesson(question){
- const notes=Object.entries(lessonFields).map(([key,label])=>[label,$(key).value.trim()]).filter(([,value])=>value);
+ const notes=Object.entries(lessonFields).map(([key,label])=>[label,key==='topic'?topicValue():$(key).value.trim()]).filter(([,value])=>value);
  const guidance='Ответь на языке задания. По умолчанию выбери ровно один наиболее полный вариант. Несколько ответов допустимы по явному указанию в задании. Используй предметные знания даже если класс и тема не указаны. Проверь отрицания («НЕ», «крім»), число требуемых ответов и точное соответствие букв вариантам. Для соответствий верни все пары, для последовательности — порядок. Для карты учитывай легенду, координаты и масштаб, для биологической схемы — подписи и направление стрелок, для литературы — различай автора, рассказчика и героя, сверяй цитаты с отрывком. На самостоятельный вопрос отвечай по знаниям. Если необходимой карты, схемы или отрывка нет или подпись не читается, не угадывай. Только итог.';
  const parts=[guidance];
  if(/підрядн|сполучн|членом речення/iu.test(question)){
@@ -107,7 +119,13 @@ $('scan').addEventListener('click',()=>{
 });
 window.addEventListener('message',event=>{
  if(window.parent===window||event.source!==window.parent||(parentOrigin&&event.origin!==parentOrigin)||!awaitingRead||!event.data||event.data.type!=='STUDY_OVERLAY_PAGE_TEXT')return;
- awaitingRead=false;const question=String(event.data.text||'').trim().slice(0,6500);send(question);
+ awaitingRead=false;const question=String(event.data.text||'').trim().slice(0,6500);
+ if('topic' in event.data)setDetectedTopic(event.data.topic);
+ else {
+   const prompt=question.split('\nВарианты:')[0];
+   setDetectedTopic(prompt.match(/^(?:Тема(?: тест[ау])?|Назва тесту|Название теста)\s*[:：]\s*([^\n]{1,180})$/imu)?.[1]);
+ }
+ send(question);
 });
 async function compressPhoto(file){
  if(!file.type.startsWith('image/'))throw Error('Выбери фото или скриншот');if(file.size>15_000_000)throw Error('Фото слишком большое');
