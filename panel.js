@@ -48,6 +48,14 @@ async function send(question){
  if(busy)return;
  $('readout').hidden=false;$('readText').textContent=question||'Только фото';$('method').textContent='';
  if(!question&&!image){$('answer').textContent='Вопрос не найден. Выдели текст задания или прикрепи скриншот.';msg('Не удалось прочитать вопрос. Прикрепи скриншот через скрепку.');return;}
+ const prompt=question.split(/\nВарианты:/u)[0];
+ const referencesFigure=/(?:на|за|по)\s+(?:схем[іеу]|карт[іеу]|рисунк[уе]|малюнк[уе]|ілюстрації|изображении|фото)/iu.test(prompt);
+ const referencesMark=/(?:познач|обознач|цифр|стрілк|стрелк|нумер|номер|літер|букв)/iu.test(prompt);
+ if(!image&&referencesFigure&&referencesMark&&!$('excerpt').value.trim()){
+   $('method').textContent='Нужно изображение';
+   $('answer').textContent='Прикрепи карту или схему с обозначениями.';
+   return;
+ }
  const exact=window.scannerArithmetic?.(question);
  if(typeof exact==='string'){$('method').textContent='Точный расчёт по тексту';$('answer').textContent=exact;return;}
  $('method').textContent=image?'Модель · прикреплено фото':'Модель · текст';
