@@ -48,8 +48,20 @@
     const [question, choices] = text.replace(/^Вопрос \(проверь текст\):\s*/u,'').split(/\nВарианты:\s*\n/u);
     // Parse the whole prompt. Extracting an arbitrary substring can turn a score or an option into the exercise.
     const expression = question.trim()
-      .replace(/^(?:виконай(?:те)? (?:дії|додавання(?: зручним способом)?)|спрости(?:ти)? вираз|розв[’'ʼ]яжи рівняння|виконай(?:те)? дії|обчисл(?:и|іть|ити)|вычисли(?:те|ть)?|знайд(?:и|іть) значення виразу|найди(?:те)? значение выражения|чему равно|сколько (?:будет|получится)|скільки буде)\s*[:：]?\s*/iu,'')
+      .replace(/^(?:виконай(?:те)? (?:дії|додавання(?: зручним способом)?)|спрости(?:ти)? вираз|розв[’'ʼ]яж(?:и|іть) рівняння|виконай(?:те)? дії|обчисл(?:и|іть|ити)|вычисли(?:те|ть)?|знайд(?:и|іть) значення виразу|найди(?:те)? значение выражения|чему равно|сколько (?:будет|получится)|скільки буде)\s*[:：]?\s*/iu,'')
       .replace(/[\s=?？]+$/u,'').trim();
+    const ratio=expression.replace(/х/gu,'x').match(/^\(\s*(x\s*[+−-]\s*\d+)\s*\)\s*\/\s*\(\s*(x\s*[+−-]\s*\d+)\s*\)\s*=\s*(-?\d+)$/u);
+    if(ratio && choices){
+      const hits=[];
+      for(const line of choices.trim().split('\n')){
+        const option=line.trim().match(/^([A-HА-Д])[).:\s]+(-?\d+)$/u);
+        if(!option)continue;
+        const v='('+option[2]+')';
+        const top=calculate(ratio[1].replace('x',v)),bottom=calculate(ratio[2].replace('x',v));
+        if(top&&bottom&&bottom[0]!==0n&&top[0]*bottom[1]===BigInt(ratio[3])*bottom[0]*top[1])hits.push(option[1]+') '+option[2]);
+      }
+      if(hits.length===1)return hits[0];
+    }
     if (!/[+\-−–—﹣－/]/u.test(expression)) return null;
     let result = calculate(expression);
     if (!result && /[a-zх]/i.test(expression)) {
