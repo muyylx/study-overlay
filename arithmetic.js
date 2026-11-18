@@ -48,10 +48,31 @@
     const [question, choices] = text.replace(/^Вопрос \(проверь текст\):\s*/u,'').split(/\nВарианты:\s*\n/u);
     // Parse the whole prompt. Extracting an arbitrary substring can turn a score or an option into the exercise.
     const expression = question.trim()
-      .replace(/^(?:виконай(?:те)? дії|обчисл(?:и|іть|ити)|вычисли(?:те|ть)?|знайд(?:и|іть) значення виразу|найди(?:те)? значение выражения|чему равно|сколько (?:будет|получится)|скільки буде)\s*[:：]?\s*/iu,'')
+      .replace(/^(?:виконай(?:те)? (?:дії|додавання(?: зручним способом)?)|спрости(?:ти)? вираз|розв[’'ʼ]яжи рівняння|виконай(?:те)? дії|обчисл(?:и|іть|ити)|вычисли(?:те|ть)?|знайд(?:и|іть) значення виразу|найди(?:те)? значение выражения|чему равно|сколько (?:будет|получится)|скільки буде)\s*[:：]?\s*/iu,'')
       .replace(/[\s=?？]+$/u,'').trim();
     if (!/[+\-−–—﹣－/]/u.test(expression)) return null;
-    const result = calculate(expression);
+    let result = calculate(expression);
+    if (!result && /[a-zх]/i.test(expression)) {
+      // With only addition and subtraction, evaluating at zero and each basis vector
+      // recovers the constant and every coefficient exactly.
+      const sides = expression.replace(/х/gu,'x').split('=');
+      if (sides.length > 2 || /[^a-z0-9.,()+−–—/\s=-]/i.test(sides.join('='))) return null;
+      const variables = [...new Set(sides.join('').match(/[a-z]/gi) || [])];
+      if (!variables.length || variables.length > 6) return null;
+      const difference = sides.length === 2 ? '('+sides[0]+')-('+sides[1]+')' : sides[0];
+      const at = active => calculate(difference.replace(/[a-z]/gi,letter=>letter===active?'(1)':'(0)'));
+      const constant=at(null);
+      if (!constant) return null;
+      if (sides.length === 2 && variables.length !== 1) return null;
+      result=constant;
+      for (const variable of variables) {
+        const sample=at(variable);
+        if (!sample) return null;
+        const slope=sample[0]*constant[1]-constant[0]*sample[1];
+        if (sides.length===1 && slope!==0n || sides.length===2 && slope===0n) return null;
+        if (sides.length===2) result=slope>0n?[-constant[0]*sample[1],slope]:[constant[0]*sample[1],-slope];
+      }
+    }
     if (!result) return null;
     const [n,d] = result;
     if (choices) {
