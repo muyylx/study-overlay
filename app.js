@@ -34,7 +34,7 @@ function navigation(to){
  currentScreen=to;
  for(const button of document.querySelectorAll('[data-screen]'))button.classList.toggle('active',button.dataset.screen===to);
  for(const p of document.querySelectorAll('.page'))p.classList.add('hidden');show('page-'+to,true);
- if(to==='home'){updateProfile();loadNotifications();}if(to==='bonus')loadBonus();if(to==='support')loadSupport();if(to==='ideas')loadIdeas();if(to==='bugs')loadBugs();if(to==='admin')loadAdmin();
+ if(to==='home'){updateProfile();loadNotifications();}if(to==='bonus')loadBonus();if(to==='support')loadSupport();if(to==='bugs')loadBugs();if(to==='admin')loadAdmin();
 }
 function render(){
  show('loading',false);show('auth',!profile);show('application',!!profile);show('logout',!!profile);
@@ -121,7 +121,6 @@ async function pollUnread(){if(!profile)return;try{const r=await call('/support/
  }catch{}}
 $('enableNotifications').addEventListener('click',async()=>{if(!('Notification'in window)){toast('Браузер не поддерживает эти уведомления');return;}const v=await Notification.requestPermission();toast(v==='granted'?'Уведомления разрешены (при поддержке браузером)':'Уведомления не разрешены');});
 setInterval(()=>{if(document.visibilityState==='visible'&&profile){if(currentScreen==='support')loadSupport();else pollUnread();if(currentScreen==='home')loadNotifications();}},30000);
-const ideaStatus={sent:'Отправлена',review:'На рассмотрении',accepted:'Принята',rejected:'Отклонена'};
 const bugStatus={sent:'Отправлена',review:'На рассмотрении',confirmed:'Подтверждена',rejected:'Отклонена'};
 let latestNotice=0;
 async function loadNotifications(){
@@ -133,17 +132,10 @@ async function loadNotifications(){
  }catch(e){text('noticeList',e.message);}
 }
 $('markRead').onclick=async()=>{try{await call('/notifications/read','POST',{through:latestNotice});await loadNotifications();await updateProfile();}catch(e){notice(e);}};
-function statusMessage(kind,status,rewarded=false){if(rewarded)return kind==='idea'?'✅ 10 бонусных вопросов начислены в банк.':'✅ Вознаграждение начислено в бонусный банк.';
- if(kind==='idea'&&status==='accepted')return 'Ваша идея принята.';
- if(kind==='idea'&&status==='rejected')return 'Извините, ваша идея нам не подошла. Спасибо за предложение!';
+function statusMessage(kind,status,rewarded=false){if(rewarded)return '✅ Вознаграждение начислено в бонусный банк.';
  if(kind==='bug'&&status==='confirmed')return 'Ошибка подтверждена.';
  if(kind==='bug'&&status==='rejected')return 'Ошибка не подтверждена. Можно обсудить её в поддержке.';
  if(status==='review')return 'Администратор рассматривает заявку.';return 'Заявка успешно отправлена.';}
-async function loadIdeas(){try{const {ideas}=await call('/ideas');const list=$('myIdeas');list.replaceChildren();const own=profile.role==='admin'?[]:ideas;
- if(!own.length)empty(list,'Пока нет предложений');
- for(const i of own){const item=card(i.title,i.description,`${ideaStatus[i.status]||i.status} · ${time(i.createdAt)}`);item.append(el('p','muted',statusMessage('idea',i.status,i.rewarded)));safeImage(i.image,item);list.append(item);}
- }catch(e){notice(e);}}
-$('ideaForm').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{const image=await imageData($('ideaImage').files[0]);await call('/ideas','POST',{title:String(f.get('title')),description:String(f.get('description')),image});$('ideaForm').reset();toast('Идея отправлена');loadIdeas();}catch(e){notice(e);}});
 async function loadBugs(){try{const {bugs}=await call('/bugs');const list=$('myBugs');list.replaceChildren();const own=profile.role==='admin'?[]:bugs;
  if(!own.length)empty(list,'Пока нет сообщений об ошибках');
  for(const b of own){const item=card(b.category==='answer'?'Неправильный ответ ИИ':'Техническая ошибка',b.description,`${bugStatus[b.status]||b.status} · ${time(b.createdAt)}`);item.append(el('p','muted',statusMessage('bug',b.status,b.rewarded)));safeImage(b.screenshot,item);list.append(item);}
@@ -151,11 +143,11 @@ async function loadBugs(){try{const {bugs}=await call('/bugs');const list=$('myB
 $('bugForm').addEventListener('submit',async e=>{e.preventDefault();try{const f=new FormData(e.currentTarget);const screenshot=await imageData($('bugImage').files[0]);if(!screenshot)throw Error('Скриншот обязателен');await call('/bugs','POST',{category:f.get('category'),description:f.get('description'),screenshot});$('bugForm').reset();toast('Жалоба отправлена на проверку');loadBugs();}catch(e){notice(e);}});
 // Admin area: server-side checks enforce every operation.
 async function loadAdmin(){if(profile?.role!=='admin')return;try{
- const [overview,u,i,threads,ideas,bugs]=await Promise.all([call('/admin/overview'),call('/admin/users'),call('/admin/invites'),call('/support/threads'),call('/ideas'),call('/bugs')]);
+ const [overview,u,i,threads,bugs]=await Promise.all([call('/admin/overview'),call('/admin/users'),call('/admin/invites'),call('/support/threads'),call('/bugs')]);
  adminData={overview,users:u.users||[],invites:i.invites||[]};
- text('adminStats',`API на связи · учеников ${overview.users.total} · с запросами сегодня ${u.users.filter(x=>x.usedToday>0).length} · вопросов ${overview.totals.questions??0} · непрочитанных сообщений ${threads.threads.reduce((n,t)=>n+t.unread,0)} · новых ошибок ${bugs.bugs.filter(x=>x.status==='sent').length} · новых идей ${ideas.ideas.filter(x=>x.status==='sent').length}`);
+ text('adminStats',`API на связи · учеников ${overview.users.total} · с запросами сегодня ${u.users.filter(x=>x.usedToday>0).length} · вопросов ${overview.totals.questions??0} · непрочитанных сообщений ${threads.threads.reduce((n,t)=>n+t.unread,0)} · новых ошибок ${bugs.bugs.filter(x=>x.status==='sent').length}`);
  $('maint').checked=!!overview.settings.maintenance;$('maintText').value=overview.settings.maintenance_message||'';$('announceText').value=overview.settings.announcement||'';
- renderAdminUsers(adminData.users);renderAdminChats(threads.threads||[]);renderAdminReview('adminIdeas',ideas.ideas||[],'idea');renderAdminReview('adminBugs',bugs.bugs||[],'bug');
+ renderAdminUsers(adminData.users);renderAdminChats(threads.threads||[]);renderAdminReview('adminBugs',bugs.bugs||[],'bug');
  }catch(e){notice(e);}}
 function renderAdminUsers(users){const list=$('adminUsers');list.replaceChildren();if(!users.length)empty(list,'Пока нет учеников');
  for(const u of users){const item=card(u.name,`Лимит ${u.dailyLimit} · использовано сегодня ${u.usedToday} · банк ${u.bank??0} · всего запросов ${u.totalQuestions} · активность ${time(u.lastActive)}`,`ID: ${u.id} · ${u.blocked?'ИИ заблокирован':'Активен'}`),row=el('div','row');
@@ -174,17 +166,17 @@ function renderAdminUsers(users){const list=$('adminUsers');list.replaceChildren
 }
 function renderAdminChats(threads){const list=$('adminChats');list.replaceChildren();if(!threads.length)empty(list,'Никто ещё не зарегистрирован');for(const t of threads){const box=card(t.name,`Непрочитано: ${t.unread} · ${t.lastMessage||'Пока пусто'}`);action(box,'Открыть чат',()=>{chatUserId=t.id;navigation('support');});list.append(box);}}
 function renderAdminReview(id,entries,kind){const list=$(id);list.replaceChildren();if(!entries.length)empty(list,'Новых заявок нет');
- const statuses=kind==='idea'?ideaStatus:bugStatus;
+ const statuses=bugStatus;
  for(const value of entries){const box=card(`${value.author||value.userId.slice(0,8)}: ${value.title|| (value.category==='answer'?'Ошибка ИИ':'Баг')}`,value.description,`${statuses[value.status]||value.status} · ${time(value.createdAt)} · ID ${value.userId.slice(0,8)}`);
   box.dataset.author=value.userId;safeImage(value.image||value.screenshot,box);
-  const select=el('select');const values=kind==='idea'?['sent','review','accepted','rejected']:['sent','review','confirmed','rejected'];
+  const select=el('select');const values=['sent','review','confirmed','rejected'];
   for(const key of values){const opt=el('option','',statuses[key]);opt.value=key;select.append(opt);}select.value=value.status;
   const row=el('div','row');row.append(select);
-  action(row,'Сохранить статус',async()=>{const path=`/admin/community/${kind==='idea'?'ideas':'bugs'}/${value.id}`;await call(path,'PATCH',{status:select.value});toast('Статус обновлён');loadAdmin();});
+  action(row,'Сохранить статус',async()=>{const path=`/admin/community/bugs/${value.id}`;await call(path,'PATCH',{status:select.value});toast('Статус обновлён');loadAdmin();});
   if(value.rewarded)row.append(el('span','badgetext','✅ Вознаграждение начислено'));
-  else if(value.status===(kind==='idea'?'accepted':'confirmed')){
+  else if(value.status==='confirmed'){
     const amount=10;
-    action(row,'Начислить +10',async()=>{await call(`/admin/community/${kind==='idea'?'ideas':'bugs'}/${value.id}/reward`,'POST',{});toast(`${amount} вопросов добавлены в бонусный банк`);loadAdmin();});
+    action(row,'Начислить +10',async()=>{await call(`/admin/community/bugs/${value.id}/reward`,'POST',{});toast(`${amount} вопросов добавлены в бонусный банк`);loadAdmin();});
   }
   box.append(row);list.append(box);
  }

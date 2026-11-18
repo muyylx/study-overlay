@@ -106,18 +106,39 @@
     return hits.length === 1 ? hits[0] : null;
   }
 
+  function linearRoot(expression) {
+    if (expression.length > 180) return null;
+    const sides = expression.replace(/[хХX]/gu,'x').replace(/[−–—]/gu,'-').split('=');
+    if (sides.length !== 2 || !sides.join('').includes('x')) return null;
+    // Limit this shortcut to sums of constants and first-degree monomials.
+    const number = String.raw`\d+(?:[.,]\d+)?`;
+    const term = `(?:${number}\\s*(?:[*×·]\\s*)?x|x|${number})(?:\\s*[/÷]\\s*${number})?`;
+    const side = new RegExp(`^\\s*[+-]?\\s*${term}(?:\\s*[+-]\\s*${term})*\\s*$`, 'u');
+    if (!sides.every(value=>side.test(value))) return null;
+    try {
+      const difference = '('+sides[0]+')-('+sides[1]+')';
+      const [n0,d0] = evaluate(difference,[0n,1n]);
+      const [n1,d1] = evaluate(difference,[1n,1n]);
+      const slope = n1*d0-n0*d1;
+      if (!slope) return null;
+      const root = slope>0n ? [-n0*d1,slope] : [n0*d1,-slope];
+      return evaluate(difference,root)[0]===0n ? root : null;
+    } catch { return null; }
+  }
+
   function solve(text) {
     const [question, choices] = text.replace(/^Вопрос \(проверь текст\):\s*/u,'').split(/\nВарианты:\s*\n/u);
     // Parse the whole prompt. Extracting an arbitrary substring can turn a score or an option into the exercise.
     const expression = question.trim()
-      .replace(/^(?:виконай(?:те)? (?:дії|додавання(?: зручним способом)?)|спрости(?:ти)? вираз|розв[’'ʼ]яж(?:и|іть) рівняння|виконай(?:те)? дії|обчисл(?:и|іть|ити)|вычисли(?:те|ть)?|знайд(?:и|іть) значення виразу|найди(?:те)? значение выражения|чему равно|сколько (?:будет|получится)|скільки буде)\s*[:：]?\s*/iu,'')
+      .replace(/^(?:виконай(?:те)? (?:дії|додавання(?: зручним способом)?)|спрости(?:ти)? вираз|розв[’'ʼ]яж(?:и|іть) рівняння|реши(?:те)? уравнение|solve(?: for x)?|виконай(?:те)? дії|обчисл(?:и|іть|ити)|вычисли(?:те|ть)?|знайд(?:и|іть) значення виразу|найди(?:те)? значение выражения|чему равно|сколько (?:будет|получится)|скільки буде)\s*[:：]?\s*/iu,'')
       .replace(/[\s=?？]+$/u,'').trim();
     if (choices && expression.includes('=') && /[xх]/iu.test(expression)) {
       const checked = checkCandidates(expression, choices);
       if (checked) return checked;
     }
-    if (!/[+\-−–—﹣－/*×·÷]/u.test(expression)) return null;
-    let result = calculate(expression);
+    const linear = expression.includes('=') ? linearRoot(expression) : null;
+    if (!linear && !/[+\-−–—﹣－/*×·÷]/u.test(expression)) return null;
+    let result = linear || calculate(expression);
     if (!result && expression.length <= 180 && /^[0-9.,()+*/×·÷\s−–—-]+$/u.test(expression)) {
       try { result = evaluate(expression.replace(/[−–—]/gu, '-'), null); }
       catch { return null; }

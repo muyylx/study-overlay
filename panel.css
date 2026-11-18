@@ -12,3 +12,11 @@
 .lesson-fields small{color:#aabbd6}
 
 .scan-row{display:flex;align-items:center;gap:8px}.scan-row .scan{flex:1;min-width:0;width:auto}.scan-row .clip{flex:none}.preview img{width:36px;height:44px;object-fit:contain;border-radius:4px}.preview span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.preview .tiny{flex:none}.lesson-fields select{font:inherit;padding:6px}
+
+#resultTools:not([hidden]){display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+#recentList{display:grid;gap:5px;margin-bottom:6px}
+#recentList button{text-align:left;overflow-wrap:anywhere;white-space:normal}
+#backHome:not([hidden]){display:inline-block;padding:8px 0}
+#manualBox textarea{min-height:6em}
+
+.result-method:not(:empty){display:block;margin:0 2px 6px;color:#bcccf1;overflow-wrap:anywhere}

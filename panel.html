@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101827"><title>scanner test by muyylx · Панель</title><link rel="stylesheet" href="./panel.css?v=3215"></head>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101827"><title>scanner test by muyylx · Панель</title><link rel="stylesheet" href="./panel.css?v=3300"></head>
 <body><main class="panel" role="main">
  <section class="state" id="loginState" hidden>
   <div class="status-icon">◈</div>
@@ -11,10 +11,12 @@
  <section id="workState" hidden>
   <div class="profile"><span class="dot"></span><span id="who">Подключено</span><span class="quota" id="remaining"></span><button class="icon-button" id="disconnect" aria-label="Отключить панель" title="Отключить">⏏</button></div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px"><p id="topicStatus" aria-live="polite" style="margin:0 0 8px;overflow-wrap:anywhere">Тема: не найдено</p><button id="findTopic" type="button" class="tiny">Поиск темы</button></div><small id="topicHint" role="status"></small>
-  <div class="scan-row"><button class="scan" id="scan"><span class="scan-symbol">◎</span><span>Просканировать экран</span></button><label for="photo" class="clip" title="Прикрепить фото" aria-label="Прикрепить фото">📎</label><input type="file" accept="image/*" id="photo" hidden></div>
+  <a id="backHome" class="hint-link" href="./index.html" hidden>‹ Личный кабинет</a><div class="scan-row"><button class="scan" id="scan"><span class="scan-symbol">◎</span><span>Просканировать экран</span></button><label for="photo" class="clip" title="Прикрепить фото" aria-label="Прикрепить фото">📎</label><input type="file" accept="image/*" id="photo" hidden></div>
   <div class="preview" id="imageSection" hidden><img id="photoThumb" alt="Прикреплённый снимок"><span id="imageName"></span><button id="sendPhoto" class="tiny" hidden>Разобрать фото</button><button class="tiny" id="removePhoto" aria-label="Убрать снимок">×</button></div>
   <div class="answer-head"><strong>Ответ</strong><small id="ownerRelease" hidden role="status" style="margin-left:6px;font-size:11px;color:#b8caff"></small></div>
-  <div class="answer" id="answer" aria-live="polite">Нажми «Просканировать экран», чтобы разобрать текст задания.</div><details class="lesson" id="readout" hidden><summary>Что прочитала панель</summary><small id="method"></small><pre id="readText" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre><button type="button" id="editScan" class="tiny">Исправить текст</button></details><details class="lesson"><summary>Дополнительная информация</summary>
+  <small id="method" class="result-method" role="status"></small><div class="answer" id="answer" aria-live="polite">Нажми «Просканировать экран», чтобы разобрать текст задания.</div><div id="resultTools" hidden><button class="tiny" type="button" id="copyResult">Скопировать ответ</button><button class="tiny" type="button" id="recheck">Проверить заново</button></div>
+  <details class="lesson" id="recent" hidden><summary>Последние ответы <span id="recentCount"></span></summary><div id="recentList"></div><button type="button" id="clearRecent" class="tiny">Очистить историю</button></details>
+  <details class="lesson" id="readout" hidden><summary>Что прочитала панель</summary><pre id="readText" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre><button type="button" id="editScan" class="tiny">Исправить текст</button></details><details class="lesson"><summary>Дополнительная информация</summary>
  <div class="lesson-fields"><label>Выбор ответов (не обязательно)<select id="selection"><option value="auto">Автоматически</option><option value="multiple">Несколько</option></select></label>
  <label>Класс (не обязательно)<input id="grade" maxlength="12"></label>
  <label>Предмет (не обязательно)<input id="subject" list="subjectChoices" maxlength="80"></label>
@@ -23,7 +25,7 @@
  <label style="grid-column:1/-1">Отрывок из учебника (не обязательно)<textarea id="passage" rows="3" maxlength="1500" placeholder="Вставь абзац, по которому составлен вопрос"></textarea></label>
  <small>Применяется к следующим сканированиям и фото, пока открыта панель.</small>
  <button id="clearLesson" type="button" class="tiny">Очистить</button></div></details><p class="media-tip">⚠ Если задание изображено на картинке, прикрепи скриншот 📎</p>
-  <details class="lesson"><summary>Вставить вопрос вручную</summary><form id="manualForm" class="lesson-fields"><label style="grid-column:1/-1">Вопрос и варианты<textarea id="manualQuestion" required minlength="3" maxlength="6500" rows="3"></textarea></label><button class="tiny" type="submit">Ответить</button></form></details>
+  <details class="lesson" id="manualBox"><summary>Вставить вопрос вручную</summary><form id="manualForm" class="lesson-fields"><label style="grid-column:1/-1">Вопрос и варианты<textarea id="manualQuestion" required minlength="3" maxlength="6500" rows="3"></textarea></label><button class="tiny" type="submit">Ответить</button></form></details>
  </section>
  <div class="toast" id="toast" role="status" hidden></div>
-</main><script src="./config.js"></script><script src="./arithmetic.js?v=3221" defer></script><script src="./panel.js?v=3221" defer></script></body></html>
+</main><script src="./config.js"></script><script src="./units.js?v=3300" defer></script><script src="./arithmetic.js?v=3300" defer></script><script src="./panel.js?v=3300" defer></script></body></html>

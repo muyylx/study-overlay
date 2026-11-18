@@ -28,7 +28,7 @@ async function ownerRelease(user){
 function view(on){ownerRelease(on?me:null);$('loginState').hidden=on;$('workState').hidden=!on;if(on){$('who').textContent=me.name;$('remaining').textContent=me.remaining===null?'Без личного лимита':`${me.remaining} осталось`;}}
 async function request(path,method='GET',data=null){if(!api.startsWith('https://'))throw Error('Не настроен адрес облачного сервера.');const headers={'content-type':'application/json','authorization':'Bearer '+token,'x-study-device':device};let r;try{r=await fetch(api+path,{signal:AbortSignal.timeout(path==='/ask'?16000:60000),method,headers,body:data===null?undefined:JSON.stringify(data),cache:'no-store'});}catch(e){if(e?.name==='TimeoutError'||e?.name==='AbortError')throw Error('Время ожидания ответа истекло. Попробуй ещё раз.');throw Error('Не удалось соединиться с сервером.');}const res=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(Error(res.error||'Ошибка сервера'),{status:r.status});return res;}
 async function validate(){const res=await request('/me');me=res.user;view(true);return res;}
-function clear(){sessionRevision++;clearLesson();token='';device='';me=null;remove();view(false);}
+function clear(){clearRecent();$('answer').textContent='';$('readText').textContent='';$('manualQuestion').value='';$('removePhoto').click();sessionRevision++;clearLesson();token='';device='';me=null;remove();view(false);}
 function tokenFromStorage(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');if(s&&/^[a-f0-9]{64}$/.test(s.token||'')&&/^[a-f0-9]{64}$/.test(s.device||'')){token=s.token;device=s.device;return true;}}catch{}return false;}
 function id(){const a=crypto.getRandomValues(new Uint8Array(16));return Array.from(a,x=>x.toString(16).padStart(2,'0')).join('');}
 $('connect').addEventListener('click',()=>{
@@ -179,8 +179,60 @@ function displayAnswer(answer,question){
  }
  return matches.length===1?matches[0][1]+') '+matches[0][2]:answer;
 }
-async function send(question){
+// Only text answers from this open panel are retained. Closing it releases the history.
+const recentAnswers = new Map();
+let activeResult = null;
+let readRound=0;
+function renderRecent(){
+ const list=$('recentList');
+ if(!list?.replaceChildren)return;
+ list.replaceChildren();
+ $('recent').hidden=!recentAnswers.size;
+ $('recentCount').textContent='('+recentAnswers.size+')';
+ for(const item of [...recentAnswers.values()].reverse()){
+   const button=document.createElement('button');
+   button.type='button';button.className='tiny';
+   button.textContent=item.question.split('\nВарианты:')[0].replace(/^Вопрос \(проверь текст\):\s*/u,'').slice(0,100);
+   const preview=document.createElement('small');
+   preview.textContent=item.answer.slice(0,120);
+   button.append(document.createElement('br'),preview);
+   button.addEventListener('click',()=>{
+     if(busy||awaitingRead)return;
+     showResult(item,'Из истории · '+item.method);
+     $('readout').hidden=false;$('readText').textContent=item.question;
+     $('recent').open=false;
+   });
+   list.append(button);
+ }
+}
+function showResult(item,method){
+ activeResult=item;
+ $('answer').textContent=item.answer;
+ $('method').textContent=method;
+ $('resultTools').hidden=false;
+ $('recheck').hidden=!item.key;
+}
+function resetResult(){
+ $('method').textContent='';activeResult=null;$('resultTools').hidden=true;
+}
+function clearRecent(){
+ recentAnswers.clear();renderRecent();resetResult();
+}
+$('clearRecent').addEventListener('click',clearRecent);
+$('copyResult').addEventListener('click',async()=>{
+ if(!activeResult)return;
+ try{await navigator.clipboard.writeText(activeResult.answer);msg('Ответ скопирован');}
+ catch{msg('Удерживай текст ответа и выбери «Скопировать».');}
+});
+$('recheck').addEventListener('click',()=>{
+ if(!activeResult?.key||busy||awaitingRead)return;
+ if(image){msg('Убери прикреплённое фото, чтобы перепроверить текст.');return;}
+ send(activeResult.question,true);
+});
+async function send(question,force=false){
  if(busy)return;
+ const activeKeyBefore=activeResult?.key;
+ resetResult();
  const divider='\nВарианты:\n';
  question=question.replace(/\r\n?/gu,'\n');
  // A copied exercise often has labels but no line introducing its choices.
@@ -215,13 +267,34 @@ async function send(question){
    return;
  }
  multiple ||=/оберіть (?:усі|всі|два|три)|выберите (?:все|два|три)|select all|choose (?:two|three)/iu.test(prompt);
+ const key=image?'':JSON.stringify([question,topicValue(),$('subject').value,$('grade').value,$('passage').value,multiple]);
+ if(force && activeKeyBefore && activeKeyBefore!==key){
+   $('answer').textContent='Контекст изменился. Просканируй вопрос заново с текущими настройками.';
+   return;
+ }
+ const previous=key&&recentAnswers.get(key);
+ if(!force && previous && Date.now()-previous.time<10*60*1000){
+   showResult(previous,'Повторный вопрос · '+previous.method);return;
+ }
+ function complete(answer,method){
+   if(typeof answer!=='string'||!answer.trim())throw Error('Получен пустой ответ');
+   const item={key,question,answer,method,time:Date.now()};
+   if(key && !/недостат(?:очно|ньо) дан|не удалось подтвердить/iu.test(answer)){
+     recentAnswers.delete(key);recentAnswers.set(key,item);
+     if(recentAnswers.size>10)recentAnswers.delete(recentAnswers.keys().next().value);
+     renderRecent();
+   }
+   showResult(item,method);
+ }
+ const converted=!image&&!multiple&&window.scannerUnits?.(question);
+ if(converted){complete(converted,'Точный перевод единиц');return;}
  const audience=image?null:verifiedAudience(question,multiple);
  if(audience){
    $('method').textContent='Сверено с предисловием Диккенса · Project Gutenberg № 24022';
-   $('answer').textContent=audience;return;
+   complete(audience,$('method').textContent);return;
  }
  const exact=image || multiple ? null : window.scannerArithmetic?.(question);
- if(typeof exact==='string'){$('method').textContent='Точный расчёт по тексту';$('answer').textContent=exact;return;}
+ if(typeof exact==='string'){$('method').textContent='Точный расчёт по тексту';complete(exact,$('method').textContent);return;}
  $('method').textContent=image?'Модель · прикреплено фото':'Модель · текст';
  const reference=!image&&lessonReference(topicValue(),prompt);
  if(reference)$('method').textContent='Модель · сверка с текстом произведения: '+reference.url;
@@ -230,7 +303,7 @@ async function send(question){
  const submittedSession=sessionRevision;
  if(submittedImage)question+='\nСверь условие, выделенные слова и все варианты по приложенному снимку. При расхождении текста страницы со снимком используй задание на снимке.';
  busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
- try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;$('answer').textContent=submittedImage||multiple?response.answer:displayAnswer(response.answer,question);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
+ try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;complete(submittedImage||multiple?response.answer:displayAnswer(response.answer,question),$('method').textContent);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
  catch(e){
    if(submittedSession!==sessionRevision)return;
    if(reference && (!e.status || [429,502,503,504].includes(e.status))){
@@ -255,11 +328,12 @@ $('manualForm').addEventListener('submit',event=>{
 });
 $('scan').addEventListener('click',()=>{
  if(busy||awaitingRead)return;
+ resetResult();
  const reuseRead=finding;
  if(finding)endTopicSearch('');
  if(window.parent===window){msg('Сканирование доступно после запуска закладки поверх учебной страницы.');return;}
- awaitingRead=true;$('answer').textContent='Читаем текст страницы…';if(!reuseRead)window.parent.postMessage({type:'STUDY_OVERLAY_READ_PAGE'},parentOrigin||'*');
- setTimeout(()=>{if(awaitingRead){awaitingRead=false;if(image){send('Разбери задание на прикреплённом изображении.');}else{$('answer').textContent='Не удалось прочитать вопрос со страницы. Попробуй скриншот через скрепку.';}}},4000);
+ const round=++readRound;awaitingRead=true;$('answer').textContent='Читаем текст страницы…';if(!reuseRead)window.parent.postMessage({type:'STUDY_OVERLAY_READ_PAGE'},parentOrigin||'*');
+ setTimeout(()=>{if(awaitingRead && round===readRound){awaitingRead=false;if(image){send('Разбери задание на прикреплённом изображении.');}else{$('answer').textContent='Не удалось прочитать вопрос со страницы. Попробуй скриншот через скрепку.';}}},4000);
 });
 window.addEventListener('message',event=>{
  if(window.parent===window||event.source!==window.parent||(parentOrigin&&event.origin!==parentOrigin)||(!awaitingRead&&!finding)||!event.data||event.data.type!=='STUDY_OVERLAY_PAGE_TEXT')return;
@@ -276,18 +350,51 @@ async function compressPhoto(file){
  if(!file.type.startsWith('image/'))throw Error('Выбери фото или скриншот');if(file.size>15_000_000)throw Error('Фото слишком большое');
  const raw=await new Promise((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=()=>reject(Error('Не прочитали фото'));fr.readAsDataURL(file);});
  const img=await new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(Error('Не удалось открыть фото'));im.src=raw;});
- const scale=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight)),w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
- const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');if(!ctx)throw Error('Нет поддержки обработки фото');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
- let result=c.toDataURL('image/jpeg',.86);if(result.length>1_450_000)result=c.toDataURL('image/jpeg',.65);c.width=c.height=0;if(result.length>1_450_000)throw Error('Изображение слишком большое. Обрежь его.');return result;
+ const canvas=document.createElement('canvas');
+ const ctx=canvas.getContext('2d');if(!ctx)throw Error('Нет поддержки обработки фото');
+ try{
+   for(const limit of [1600,1280,1024,800]){
+     const scale=Math.min(1,limit/Math.max(img.naturalWidth,img.naturalHeight));
+     canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+     canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+     ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
+     for(const quality of [.86,.68]){
+       const result=canvas.toDataURL('image/jpeg',quality);
+       if(result.startsWith('data:image/jpeg;base64,') && result.length<=1_450_000)return result;
+     }
+   }
+   throw Error('Обрежь снимок до области задания.');
+ }finally{canvas.width=canvas.height=0;}
 }
-$('photo').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;const revision=++photoRevision;try{const compressed=await compressPhoto(file);if(revision!==photoRevision)return;image=compressed;$('photoThumb').src=image;$('imageSection').hidden=false;$('sendPhoto').hidden=false;$('imageName').textContent='📎 '+file.name.slice(0,30);msg('Фото прикреплено');}catch(error){msg(error.message);}e.target.value='';});
+async function attachPhoto(file){
+ const revision=++photoRevision;
+ try{
+   const compressed=await compressPhoto(file);
+   if(revision!==photoRevision)return;
+   image=compressed;$('photoThumb').src=image;$('imageSection').hidden=false;
+   $('sendPhoto').hidden=false;$('imageName').textContent='📎 '+(file.name||'Скриншот').slice(0,30);
+   msg('Фото прикреплено');
+ }catch(error){if(revision===photoRevision)msg(error.message);}
+}
+$('photo').addEventListener('change',event=>{
+ const input=event.target,file=input.files?.[0];input.value='';
+ if(file)void attachPhoto(file);
+});
+window.addEventListener('paste',event=>{
+ if(!me || busy)return;
+ const item=Array.from(event.clipboardData?.items||[]).find(x=>x.kind==='file'&&x.type.startsWith('image/'));
+ const file=item?.getAsFile();if(!file)return;
+ event.preventDefault();void attachPhoto(file);
+});
 $('removePhoto').addEventListener('click',()=>{photoRevision++;image='';$('photoThumb').removeAttribute('src');$('imageSection').hidden=true;$('sendPhoto').hidden=true;});
 $('sendPhoto').addEventListener('click',()=>send('Прочитай вопрос и варианты на изображении.'));
 if(window.parent===window){
+ $('backHome').hidden=false;$('findTopic').hidden=true;$('manualBox').open=true;
+ $('workState').insertBefore($('manualBox'),$('imageSection'));
  $('connect').hidden=true; $('loginHelp').textContent='Войди в кабинет и вернись на эту страницу.';
  $('scan').hidden=true;
  try{token=localStorage.getItem('study_3_token')||'';device=localStorage.getItem('study_3_device')||'';}catch{}
- $('answer').textContent='Прикрепи скриншот задания и нажми «Разобрать фото».';
+ $('answer').textContent='Введи вопрос выше или прикрепи фото через скрепку.';
 }
 window.addEventListener('pageshow',()=>{if(window.parent===window&&!me){
  try{const saved=localStorage.getItem('study_3_token');if(saved){token=saved;device=localStorage.getItem('study_3_device')||'';validate().catch(e=>msg(e.message));}}catch{}
