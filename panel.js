@@ -32,16 +32,16 @@ window.addEventListener('message',async event=>{
 });
 $('disconnect').addEventListener('click',()=>{clear();msg('Панель отключена. Аккаунт на основном сайте сохранён.');});
 async function refresh(){try{await validate();}catch(e){if(e.status===401)clear();msg(e.message);}}
-const lessonFields={grade:'Класс',subject:'Предмет',topic:'Тема или произведение',excerpt:'Отрывок или заметка'};
+const lessonFields={grade:'Класс',subject:'Предмет',topic:'Тема или произведение'};
 function clearLesson(){for(const key of Object.keys(lessonFields))$(key).value='';}
 $('clearLesson').addEventListener('click',clearLesson);
 function withLesson(question){
  const notes=Object.entries(lessonFields).map(([key,label])=>[label,$(key).value.trim()]).filter(([,value])=>value);
- const guidance='Ответь на языке задания. Проверь отрицания («НЕ», «крім»), число требуемых ответов и точное соответствие букв вариантам. Для соответствий верни все пары, для последовательности — порядок. Для карты учитывай легенду, координаты и масштаб, для биологической схемы — подписи и направление стрелок, для литературы — различай автора, рассказчика и героя, сверяй цитаты с отрывком. На самостоятельный вопрос отвечай по знаниям. Если необходимой карты, схемы или отрывка нет или подпись не читается, не угадывай. Только итог.';
+ const guidance='Ответь на языке задания. По умолчанию выбери ровно один наиболее полный вариант. Несколько ответов допустимы по явному указанию в задании. Используй предметные знания даже если класс и тема не указаны. Проверь отрицания («НЕ», «крім»), число требуемых ответов и точное соответствие букв вариантам. Для соответствий верни все пары, для последовательности — порядок. Для карты учитывай легенду, координаты и масштаб, для биологической схемы — подписи и направление стрелок, для литературы — различай автора, рассказчика и героя, сверяй цитаты с отрывком. На самостоятельный вопрос отвечай по знаниям. Если необходимой карты, схемы или отрывка нет или подпись не читается, не угадывай. Только итог.';
  const parts=[guidance, 'Задание: '+question];
  if(notes.length)parts.push('Справка ученика (учитывай только относящееся к вопросу): '+JSON.stringify(Object.fromEntries(notes)));
  const input=parts.join('\n');
- if(input.length>6500)throw Error('Слишком много текста. Сократи отрывок или выдели только вопрос с вариантами.');
+ if(input.length>6500)throw Error('Слишком много текста. Сократи текст или выдели только вопрос с вариантами.');
  return input;
 }
 async function send(question){
@@ -51,7 +51,7 @@ async function send(question){
  const prompt=question.split(/\nВарианты:/u)[0];
  const referencesFigure=/(?:на|за|по)\s+(?:схем[іеу]|карт[іеу]|рисунк[уе]|малюнк[уе]|ілюстрації|изображении|фото)/iu.test(prompt);
  const referencesMark=/(?:познач|обознач|цифр|стрілк|стрелк|нумер|номер|літер|букв)/iu.test(prompt);
- if(!image&&referencesFigure&&referencesMark&&!$('excerpt').value.trim()){
+ if(!image&&referencesFigure&&referencesMark){
    $('method').textContent='Нужно изображение';
    $('answer').textContent='Прикрепи карту или схему с обозначениями.';
    return;
