@@ -46,6 +46,8 @@ function withLesson(question){
 }
 async function send(question){
  if(busy)return;if(!question&&!image){$('answer').textContent='Вопрос не найден. Выдели текст задания или прикрепи скриншот.';msg('Не удалось прочитать вопрос. Прикрепи скриншот через скрепку.');return;}
+ const exact=!image && window.scannerArithmetic?.(question);
+ if(typeof exact==='string'){$('answer').textContent=exact;return;}
  busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
  try{const response=await request('/ask','POST',{question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:image||undefined});$('answer').textContent=response.answer;await refresh();}
  catch(e){$('answer').textContent='Ошибка: '+e.message;if(e.status===401)clear();}
