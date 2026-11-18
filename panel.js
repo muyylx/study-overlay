@@ -10,7 +10,21 @@ const SESSION_KEY='study3_paired_session_v2';
 function msg(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(msg.timer);msg.timer=setTimeout(()=>$('toast').hidden=true,5000);}
 function save(){try{localStorage.setItem(SESSION_KEY,JSON.stringify({token,device}));}catch{}}
 function remove(){try{localStorage.removeItem(SESSION_KEY);}catch{}}
-function view(on){$('loginState').hidden=on;$('workState').hidden=!on;if(on){$('who').textContent=me.name;$('remaining').textContent=me.remaining===null?'Без личного лимита':`${me.remaining} осталось`;}}
+const panelBuild=new URL(document.currentScript?.src||location.href).searchParams.get('v');
+let releaseUser=null;
+async function ownerRelease(user){
+ const badge=$('ownerRelease');
+ if(user?.role!=='admin'){releaseUser=null;badge.hidden=true;badge.textContent='';return;}
+ if(releaseUser===user.id && !badge.hidden)return;
+ releaseUser=user.id;badge.hidden=false;badge.textContent='Проверяем обновление…';
+ try{
+  const response=await fetch('./panel-release.json?t='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(4000)});
+  if(!response.ok)throw Error();
+  const {build}=await response.json();if(typeof build!=='string')throw Error();
+  if(me?.role==='admin'&&me.id===user.id)badge.textContent=build===panelBuild?'✓ Обновление подключено · '+build:'Доступно обновление · переоткрой панель';
+ }catch{if(me?.role==='admin'&&me.id===user.id){badge.textContent='Версию подтвердить не удалось';releaseUser=null;}}
+}
+function view(on){ownerRelease(on?me:null);$('loginState').hidden=on;$('workState').hidden=!on;if(on){$('who').textContent=me.name;$('remaining').textContent=me.remaining===null?'Без личного лимита':`${me.remaining} осталось`;}}
 async function request(path,method='GET',data=null){if(!api.startsWith('https://'))throw Error('Не настроен адрес облачного сервера.');const headers={'content-type':'application/json','authorization':'Bearer '+token,'x-study-device':device};let r;try{r=await fetch(api+path,{signal:AbortSignal.timeout(path==='/ask'?16000:60000),method,headers,body:data===null?undefined:JSON.stringify(data),cache:'no-store'});}catch(e){if(e?.name==='TimeoutError'||e?.name==='AbortError')throw Error('Время ожидания ответа истекло. Попробуй ещё раз.');throw Error('Не удалось соединиться с сервером.');}const res=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(Error(res.error||'Ошибка сервера'),{status:r.status});return res;}
 async function validate(){const res=await request('/me');me=res.user;view(true);return res;}
 function clear(){clearLesson();token='';device='';me=null;remove();view(false);}
