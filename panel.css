@@ -10,3 +10,5 @@
 .lesson-fields label:nth-child(n+3),.lesson-fields small{grid-column:1/-1}
 .lesson-fields input,.lesson-fields textarea{width:100%;box-sizing:border-box;background:#0d1726;color:#eef3ff;border:1px solid #526582;border-radius:8px;padding:9px;font:16px system-ui}
 .lesson-fields small{color:#aabbd6}
+
+.scan-row{display:flex;align-items:center;gap:8px}.scan-row .scan{flex:1;min-width:0;width:auto}.scan-row .clip{flex:none}.preview img{width:36px;height:44px;object-fit:contain;border-radius:4px}.preview span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.preview .tiny{flex:none}.lesson-fields select{font:inherit;padding:6px}

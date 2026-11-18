@@ -47,7 +47,7 @@ window.addEventListener('message',async event=>{
 $('disconnect').addEventListener('click',()=>{clear();msg('Панель отключена. Аккаунт на основном сайте сохранён.');});
 async function refresh(){try{await validate();}catch(e){if(e.status===401)clear();msg(e.message);}}
 const lessonFields={grade:'Класс',subject:'Предмет',topic:'Тема или произведение'};
-function clearLesson(){for(const key of Object.keys(lessonFields))$(key).value='';}
+function clearLesson(){if($('selection'))$('selection').value='auto';for(const key of Object.keys(lessonFields))$(key).value='';}
 $('clearLesson').addEventListener('click',clearLesson);
 function withLesson(question){
  const notes=Object.entries(lessonFields).map(([key,label])=>[label,$(key).value.trim()]).filter(([,value])=>value);
@@ -64,6 +64,16 @@ function withLesson(question){
 }
 async function send(question){
  if(busy)return;
+ const divider='\nВарианты:\n';
+ const pos=question.indexOf(divider);
+ let multiple=$('selection')?.value==='multiple';
+ if(pos>=0){
+   const lines=question.slice(pos+divider.length).split('\n');
+   const action=/^(?:обери|оберіть|вибери|виберіть) (?:правильні )?відповіді[.!]?$/iu;
+   multiple ||= lines.some(line=>action.test(line.trim()));
+   const kept=lines.filter(line=>!action.test(line.trim())&&!/^(?:далі|діслексія|дислексія|завершити|наступне|назад|submit)$/iu.test(line.trim()));
+   question=question.slice(0,pos)+(kept.length?divider+kept.join('\n'):'');
+ }
  $('readout').hidden=false;$('readText').textContent=question||'Только фото';$('method').textContent='';
  if(!question&&!image){$('answer').textContent='Вопрос не найден. Выдели текст задания или прикрепи скриншот.';msg('Не удалось прочитать вопрос. Прикрепи скриншот через скрепку.');return;}
  const prompt=question.split(/\nВарианты:/u)[0];
@@ -80,7 +90,7 @@ async function send(question){
  const submittedImage=image;
  if(submittedImage)question+='\nСверь условие, выделенные слова и все варианты по приложенному снимку. При расхождении текста страницы со снимком используй задание на снимке.';
  busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
- try{const response=await request('/ask','POST',{question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});$('answer').textContent=response.answer;if(submittedImage&&image===submittedImage)$('removePhoto').click();await refresh();}
+ try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});$('answer').textContent=response.answer;if(submittedImage&&image===submittedImage)$('removePhoto').click();await refresh();}
  catch(e){$('answer').textContent='Ошибка: '+e.message;if(e.status===401)clear();}
  finally{busy=false;$('scan').disabled=false;}
 }
@@ -107,8 +117,8 @@ async function compressPhoto(file){
  const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');if(!ctx)throw Error('Нет поддержки обработки фото');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
  let result=c.toDataURL('image/jpeg',.86);if(result.length>1_450_000)result=c.toDataURL('image/jpeg',.65);c.width=c.height=0;if(result.length>1_450_000)throw Error('Изображение слишком большое. Обрежь его.');return result;
 }
-$('photo').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{image=await compressPhoto(file);$('imageSection').hidden=false;$('sendPhoto').hidden=false;$('imageName').textContent='📎 '+file.name.slice(0,30);msg('Фото прикреплено');}catch(error){msg(error.message);}e.target.value='';});
-$('removePhoto').addEventListener('click',()=>{image='';$('imageSection').hidden=true;$('sendPhoto').hidden=true;});
+$('photo').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{image=await compressPhoto(file);$('photoThumb').src=image;$('imageSection').hidden=false;$('sendPhoto').hidden=false;$('imageName').textContent='📎 '+file.name.slice(0,30);msg('Фото прикреплено');}catch(error){msg(error.message);}e.target.value='';});
+$('removePhoto').addEventListener('click',()=>{image='';$('photoThumb').removeAttribute('src');$('imageSection').hidden=true;$('sendPhoto').hidden=true;});
 $('sendPhoto').addEventListener('click',()=>send('Прочитай вопрос и варианты на изображении.'));
 if(window.parent===window){
  $('connect').hidden=true; $('loginHelp').textContent='Войди в кабинет и вернись на эту страницу.';
