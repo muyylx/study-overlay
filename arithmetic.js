@@ -9,7 +9,7 @@
 
   function calculate(text) {
     if (text.length > 180) return null;
-    const source = text.replace(/[−–]/g, '-').trim();
+    const source = text.replace(/[−–—﹣－]/g, '-').trim();
     const tokens = source.match(/\d+(?:[.,]\d+|\s*\/\s*\d+)?|[()+-]|[^\s]/gu) || [];
     let pos = 0;
     function atom() {
@@ -46,7 +46,11 @@
 
   function solve(text) {
     const [question, choices] = text.replace(/^Вопрос \(проверь текст\):\s*/u,'').split(/\nВарианты:\s*\n/u);
-    const expression = question.trim().replace(/^(?:виконай(?:те)? дії|обчисли(?:ти|ть|те)?|вычисли(?:те|ть)?|найди(?:те)? значение выражения)\s*[:：]?\s*/iu,'').replace(/\s*=\s*\??\s*$/,'');
+    // Parse the whole prompt. Extracting an arbitrary substring can turn a score or an option into the exercise.
+    const expression = question.trim()
+      .replace(/^(?:виконай(?:те)? дії|обчисл(?:и|іть|ити)|вычисли(?:те|ть)?|знайд(?:и|іть) значення виразу|найди(?:те)? значение выражения|чему равно|сколько (?:будет|получится)|скільки буде)\s*[:：]?\s*/iu,'')
+      .replace(/[\s=?？]+$/u,'').trim();
+    if (!/[+\-−–—﹣－/]/u.test(expression)) return null;
     const result = calculate(expression);
     if (!result) return null;
     const [n,d] = result;
@@ -56,12 +60,12 @@
         // Previous bookmarks prefixed every option with a synthetic ordinal.
         const choice = line.trim().replace(/^\d+\.\s+(?=[A-DА-ГІЇЄҐ][).:\s])/iu,'');
         const parts = choice.match(/^(?:([A-HА-ДЄІЇҐ])(?:\s*[).:]\s*|\s+))?(.+)$/iu);
-        if (!parts) return null;
+        if (!parts) continue;
         const value = calculate(parts[2]);
-        if (!value) return null;
+        if (!value) continue;
         if (value[0]*d === n*value[1]) matches.push(parts[1] ? parts[1]+') '+parts[2] : parts[2]);
       }
-      return matches.length === 1 ? matches[0] : null;
+      if (matches.length === 1) return matches[0];
     }
     let a = n < 0n ? -n : n, b = d;
     while (b) [a,b] = [b,a%b];

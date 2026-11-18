@@ -45,9 +45,12 @@ function withLesson(question){
  return input;
 }
 async function send(question){
- if(busy)return;if(!question&&!image){$('answer').textContent='Вопрос не найден. Выдели текст задания или прикрепи скриншот.';msg('Не удалось прочитать вопрос. Прикрепи скриншот через скрепку.');return;}
- const exact=!image && window.scannerArithmetic?.(question);
- if(typeof exact==='string'){$('answer').textContent=exact;return;}
+ if(busy)return;
+ $('readout').hidden=false;$('readText').textContent=question||'Только фото';$('method').textContent='';
+ if(!question&&!image){$('answer').textContent='Вопрос не найден. Выдели текст задания или прикрепи скриншот.';msg('Не удалось прочитать вопрос. Прикрепи скриншот через скрепку.');return;}
+ const exact=window.scannerArithmetic?.(question);
+ if(typeof exact==='string'){$('method').textContent='Точный расчёт по тексту';$('answer').textContent=exact;return;}
+ $('method').textContent=image?'Модель · прикреплено фото':'Модель · текст';
  const submittedImage=image;
  busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
  try{const response=await request('/ask','POST',{question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});$('answer').textContent=response.answer;if(submittedImage&&image===submittedImage)$('removePhoto').click();await refresh();}
@@ -60,7 +63,7 @@ $('manualForm').addEventListener('submit',event=>{
  if(value.length>=3)send(value);
 });
 $('scan').addEventListener('click',()=>{
- if(busy)return;
+ if(busy||awaitingRead)return;
  if(window.parent===window){msg('Сканирование доступно после запуска закладки поверх учебной страницы.');return;}
  awaitingRead=true;$('answer').textContent='Читаем текст страницы…';window.parent.postMessage({type:'STUDY_OVERLAY_READ_PAGE'},parentOrigin||'*');
  setTimeout(()=>{if(awaitingRead){awaitingRead=false;if(image){send('Разбери задание на прикреплённом изображении.');}else{$('answer').textContent='Не удалось прочитать вопрос со страницы. Попробуй скриншот через скрепку.';}}},4000);
