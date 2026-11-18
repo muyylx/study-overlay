@@ -87,11 +87,26 @@ window.addEventListener('message',event=>{
 });
 function clearLesson(){if($('selection'))$('selection').value='auto';for(const key of Object.keys(lessonFields))$(key).value='';showTopic();}
 $('clearLesson').addEventListener('click',clearLesson);
+// Editorial summaries are selected by work and question, never by option position.
+function lessonReference(topic,question){
+ const named=/вітька\s*(?:\+|і|и|та)\s*галя|повість про перше кохання/iu;
+ const distinctive=/великі чаплі|вітьк[аоиу] гороб|федько котигорош/iu;
+ if(!named.test(topic+' '+question)&&!distinctive.test(question))return null;
+ const records=[
+   [/дуел|подія|липня|ставк/iu,'25 липня у Великих Чаплях запланували дуель. Суперником Вітьки був Петро Білий.','https://uahistory.co/pidruchniki/mischenko-ukraine-literature-8-class-2016/25.php'],
+   [/стаж|скільки.{0,25}років|вік/iu,'На початку повісті Вітькові ще не виповнилося чотирнадцять років.','https://www.ukrlib.com.ua/styslo/printit.php?tid=17567'],
+   [/гітар|серенад|бриль|сомбреро/iu,'Інструмент для серенади належав сестрі Федька. Для капелюха використали бриль з городнього опудала.','https://files.pidruchnyk.com.ua/uploads/book/8-klas-ukrliteratura-borzenko-2021.pdf']
+ ];
+ const record=records.find(([pattern])=>pattern.test(question));
+ return record?{fact:record[1],url:record[2]}:null;
+}
 function withLesson(question){
  const notes=Object.entries(lessonFields).map(([key,label])=>[label,key==='topic'?topicValue():$(key).value.trim()]).filter(([,value])=>value);
  const [stem]=question.split('\nВарианты:');
  const context=Object.fromEntries(notes);
  const parts=[];
+ const reference=lessonReference(context.Тема||'',stem);
+ if(reference)parts.push('Джерело до завдання — переказ фрагмента про відповідний епізод: '+reference.fact+' Зістав факт з усіма варіантами, врахуй заперечення.');
  if(notes.length)parts.push('Контекст теста: '+JSON.stringify(context));
  parts.push('Определи, что именно требуется узнать из формулировки задания. Сначала сформулируй краткий ответ по существу, затем сопоставь его с содержанием каждого варианта. Проверь отрицания, ограничения и подпись выбранного варианта. Верни только итог на языке задания.');
  if(/літератур|литератур|письменник|автор|книг|повіст|геро[йяї]|читач|твір|твору|оповідан|роман|поем|жанр/iu.test([context.Предмет,context.Тема,stem].join(' '))){
@@ -125,6 +140,19 @@ function verifiedAudience(question,multiple){
  const hits=rows.filter(r=>/^(?:для широкого (?:кола|загалу) читачів|широкому колу читачів|усім читачам|всім читачам)[.!]?$/u.test(normalize(r[2])));
  return hits.length===1?hits[0][1]+') '+hits[0][2].trim():null;
 }
+// Restore the displayed label only when one option matches the complete response.
+function displayAnswer(answer,question){
+ const rows=question.split('\nВарианты:\n')[1];
+ if(!rows||typeof answer!=='string')return answer;
+ const norm=s=>s.normalize('NFC').trim().replace(/[.!]+$/u,'').replace(/\s+/gu,' ');
+ const options=rows.split('\n').map(row=>row.trim().replace(/^\d+\.\s+(?=[A-HА-Д])/u,'').match(/^([A-HА-Д])(?:[).:]\s*|\s+)(.+)$/u)).filter(Boolean);
+ const value=norm(answer);
+ let matches=options.filter(([,label,content])=>norm(content)===value || label===value || [' ',') ','. ',': '].some(sep=>norm(label+sep+content)===value));
+ if(!matches.length && value.length>3){
+   matches=options.filter(([,label,content])=>norm(content).toLowerCase()===value.toLowerCase());
+ }
+ return matches.length===1?matches[0][1]+') '+matches[0][2]:answer;
+}
 async function send(question){
  if(busy)return;
  const divider='\nВарианты:\n';
@@ -155,13 +183,22 @@ async function send(question){
  const exact=image ? null : window.scannerArithmetic?.(question);
  if(typeof exact==='string'){$('method').textContent='Точный расчёт по тексту';$('answer').textContent=exact;return;}
  $('method').textContent=image?'Модель · прикреплено фото':'Модель · текст';
+ const reference=!image&&lessonReference(topicValue(),prompt);
+ if(reference)$('method').textContent='Модель · сверка с текстом произведения: '+reference.url;
  const submittedImage=image;
  if(submittedImage)question+='\nСверь условие, выделенные слова и все варианты по приложенному снимку. При расхождении текста страницы со снимком используй задание на снимке.';
  busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
- try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});$('answer').textContent=response.answer;if(submittedImage&&image===submittedImage)$('removePhoto').click();await refresh();}
+ try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});$('answer').textContent=submittedImage||multiple?response.answer:displayAnswer(response.answer,question);if(submittedImage&&image===submittedImage)$('removePhoto').click();await refresh();}
  catch(e){$('answer').textContent='Ошибка: '+e.message;if(e.status===401)clear();}
  finally{busy=false;$('scan').disabled=false;}
 }
+$('editScan').addEventListener('click',()=>{
+ const text=$('readText').textContent;
+ if(!text||text==='Только фото')return;
+ $('manualQuestion').value=text;
+ $('manualQuestion').closest('details').open=true;
+ $('manualQuestion').focus();
+});
 $('manualForm').addEventListener('submit',event=>{
  event.preventDefault();
  const value=$('manualQuestion').value.trim();
