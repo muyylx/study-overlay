@@ -47,13 +47,39 @@ window.addEventListener('message',async event=>{
 $('disconnect').addEventListener('click',()=>{clear();msg('Панель отключена. Аккаунт на основном сайте сохранён.');});
 async function refresh(){try{await validate();}catch(e){if(e.status===401)clear();msg(e.message);}}
 const lessonFields={grade:'Класс',subject:'Предмет',topic:'Тема'};
-let detectedTopic='';
+let detectedTopic='', inferred=false, finding=false, searchRound=0;
 function topicValue(){return $('topic').value.trim()||detectedTopic;}
-function showTopic(){ $('topicStatus').textContent='Тема: '+(topicValue()||'не найдено'); }
-function setDetectedTopic(value){
+function showTopic(){ $('topicStatus').textContent='Тема: '+(topicValue()||'не найдено')+(inferred && !$('topic').value.trim()?' (по вопросу)':''); }
+function setDetectedTopic(value,approximate=false){
+ inferred=approximate;
  detectedTopic=typeof value==='string'?value.replace(/\s+/gu,' ').trim().slice(0,180):'';
  showTopic();
 }
+function topicFromScan(data,question){
+ const prompt=question.split('\nВарианты:')[0];
+ const explicit=prompt.match(/^(?:Тема(?: тест[ау])?|Назва тесту|Название теста)\s*[:：]\s*([^\n]{1,180})$/imu)?.[1];
+ if(data.topic||explicit){setDetectedTopic(data.topic||explicit);return;}
+ const work=prompt.match(/(?:твор[уіае]?|повіст[ію]|оповіданн[ія]|роман[іуае]?|поем[іиаы]|каз(?:ка|ці|ки)|вірш[іуа]?)\s+«([^»\n]{2,100})»/iu);
+ const topics=[
+   [/складнопідрядн|підрядн.{0,16}(частин|реченн)/iu,'Складнопідрядне речення'],
+   [/розв.{1,4}яж.{0,6} рівняння|решите? уравнение/iu,'Рівняння'],
+   [/фотосинтез/iu,'Фотосинтез'],[/географічн.{0,4} координат/iu,'Географічні координати'],
+   [/раціональн.{0,4} числ/iu,'Раціональні числа'],[/частин[аи] мов[иі]/iu,'Частини мови']
+ ];
+ const found=work?'«'+work[1]+'»':topics.find(([pattern])=>pattern.test(prompt))?.[1];
+ setDetectedTopic(found,!!found);
+}
+function endTopicSearch(hint){
+ finding=false;$('findTopic').disabled=false;$('topicHint').textContent=hint;
+}
+function findTopic(){
+ if(window.parent===window){endTopicSearch('Открой панель поверх страницы теста.');return;}
+ if(finding||awaitingRead)return;
+ finding=true;const round=++searchRound;$('findTopic').disabled=true;$('topicHint').textContent='Читаю страницу…';
+ window.parent.postMessage({type:'STUDY_OVERLAY_READ_PAGE'},parentOrigin||'*');
+ setTimeout(()=>{if(finding&&round===searchRound)endTopicSearch('Страница не ответила. Попробуй после загрузки вопроса.');},3000);
+}
+$('findTopic').addEventListener('click',findTopic);
 $('topic').addEventListener('input',showTopic);
 window.addEventListener('message',event=>{
  if(!parentOrigin||event.origin!==parentOrigin||event.source!==window.parent||window===window.parent)return;
@@ -113,18 +139,21 @@ $('manualForm').addEventListener('submit',event=>{
 });
 $('scan').addEventListener('click',()=>{
  if(busy||awaitingRead)return;
+ const reuseRead=finding;
+ if(finding)endTopicSearch('');
  if(window.parent===window){msg('Сканирование доступно после запуска закладки поверх учебной страницы.');return;}
- awaitingRead=true;$('answer').textContent='Читаем текст страницы…';window.parent.postMessage({type:'STUDY_OVERLAY_READ_PAGE'},parentOrigin||'*');
+ awaitingRead=true;$('answer').textContent='Читаем текст страницы…';if(!reuseRead)window.parent.postMessage({type:'STUDY_OVERLAY_READ_PAGE'},parentOrigin||'*');
  setTimeout(()=>{if(awaitingRead){awaitingRead=false;if(image){send('Разбери задание на прикреплённом изображении.');}else{$('answer').textContent='Не удалось прочитать вопрос со страницы. Попробуй скриншот через скрепку.';}}},4000);
 });
 window.addEventListener('message',event=>{
- if(window.parent===window||event.source!==window.parent||(parentOrigin&&event.origin!==parentOrigin)||!awaitingRead||!event.data||event.data.type!=='STUDY_OVERLAY_PAGE_TEXT')return;
- awaitingRead=false;const question=String(event.data.text||'').trim().slice(0,6500);
- if('topic' in event.data)setDetectedTopic(event.data.topic);
- else {
-   const prompt=question.split('\nВарианты:')[0];
-   setDetectedTopic(prompt.match(/^(?:Тема(?: тест[ау])?|Назва тесту|Название теста)\s*[:：]\s*([^\n]{1,180})$/imu)?.[1]);
+ if(window.parent===window||event.source!==window.parent||(parentOrigin&&event.origin!==parentOrigin)||(!awaitingRead&&!finding)||!event.data||event.data.type!=='STUDY_OVERLAY_PAGE_TEXT')return;
+ const question=String(event.data.text||'').trim().slice(0,6500);
+ topicFromScan(event.data,question);
+ if(finding){
+   endTopicSearch($('topic').value.trim()?'Используется введённая вручную тема.':detectedTopic?'':question?'В доступном тексте название теста не указано.':'Закладка не получила название или текст. Можно выделить заголовок с подписью «Тема: …» и повторить поиск.');
+   return;
  }
+ awaitingRead=false;
  send(question);
 });
 async function compressPhoto(file){
@@ -148,5 +177,8 @@ window.addEventListener('pageshow',()=>{if(window.parent===window&&!me){
  try{const saved=localStorage.getItem('study_3_token');if(saved){token=saved;device=localStorage.getItem('study_3_device')||'';validate().catch(e=>msg(e.message));}}catch{}
 }});
 view(false);if(token||tokenFromStorage())validate().catch(e=>{if(e.status===401)clear();msg(e.message);});
-if(window.parent!==window)window.parent.postMessage({type:'STUDY_PANEL_READY'},'*');
+if(window.parent!==window){
+ window.parent.postMessage({type:'STUDY_PANEL_READY'},'*');
+ if(parentOrigin)setTimeout(()=>{if(!topicValue()&&!busy&&!awaitingRead&&!searchRound)findTopic();},650);
+}
 })();

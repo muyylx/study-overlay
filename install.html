@@ -43,7 +43,7 @@ function visible(el){if(!el||!el.getClientRects().length)return false;const r=el
 function readTopic(){
   const brand=/^(?:на\s*урок|naurok(?:\.com)?(?:\.ua)?|google forms|google форми|kahoot!?|quizizz|wayground|moodle|онлайн[- ]тест(?:ування)?|тестування|тест|тест на урок|виконання тесту|проходження тесту|тестування учнів|вхід|quiz|join a game|test|untitled form|без названия|без назви)$/iu;
   function usable(raw){
-    const text=String(raw||'').replace(/\s+/gu,' ').trim();
+    const text=String(raw||'').replace(/\s+/gu,' ').trim().replace(/\s*[|｜]\s*Тест (?:з|із|зі|по) .{1,100}?[–—-]\s*[«"“]?На Урок[»"”]?$/iu,'');
     if(text.length<3 || text.length>220)return '';
     const chunks=text.split(/\s*[|｜]\s*|\s+[–—-]\s+/u);
     const generic=v=>brand.test(v)||/^(?:тести? онлайн|онлайн[- ]тести|онлайн[- ]тестування|проходження тесту|тестування)(?:\s+(?:на|від))?\s*[«"“]?на\s*урок[»"”]?$/iu.test(v)||/^(?:виконати|пройти|почати|начать|пройти) тест|^(?:тестування онлайн|онлайн тестування|тести онлайн|онлайн[- ]тести|тести|тесты|гра|результати тесту|kahoot! play|google форми|google формы|test your knowledge)$/iu.test(v);
@@ -62,6 +62,12 @@ function readTopic(){
     }
   }
   for(const raw of [document.querySelector('meta[property="og:title"]')?.content,document.title]){
+    const t=usable(raw);if(t)return t;
+  }
+  for(const el of document.querySelectorAll('main h1,article h1,[role=main] h1')){
+    if(el.closest('fieldset,[data-question-id],[class*="question"],[aria-hidden=true],[hidden]'))continue;
+    const raw=(el.innerText||'').trim();
+    if(/^(?:обери|вибери|визнач|розв|назви|укаж|вкаж|choose|select|выберите|обчисл|сколько)/iu.test(raw))continue;
     const t=usable(raw);if(t)return t;
   }
   return '';

@@ -10,7 +10,7 @@
  </section>
  <section id="workState" hidden>
   <div class="profile"><span class="dot"></span><span id="who">Подключено</span><span class="quota" id="remaining"></span><button class="icon-button" id="disconnect" aria-label="Отключить панель" title="Отключить">⏏</button></div>
-  <p id="topicStatus" aria-live="polite" style="margin:0 0 8px;overflow-wrap:anywhere">Тема: не найдено</p>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px"><p id="topicStatus" aria-live="polite" style="margin:0 0 8px;overflow-wrap:anywhere">Тема: не найдено</p><button id="findTopic" type="button" class="tiny">Поиск темы</button></div><small id="topicHint" role="status"></small>
   <div class="scan-row"><button class="scan" id="scan"><span class="scan-symbol">◎</span><span>Просканировать экран</span></button><label for="photo" class="clip" title="Прикрепить фото" aria-label="Прикрепить фото">📎</label><input type="file" accept="image/*" id="photo" hidden></div>
   <div class="preview" id="imageSection" hidden><img id="photoThumb" alt="Прикреплённый снимок"><span id="imageName"></span><button id="sendPhoto" class="tiny" hidden>Разобрать фото</button><button class="tiny" id="removePhoto" aria-label="Убрать снимок">×</button></div>
   <div class="answer-head"><strong>Ответ</strong><small id="ownerRelease" hidden role="status" style="margin-left:6px;font-size:11px;color:#b8caff"></small></div>
@@ -25,4 +25,4 @@
   <details class="lesson"><summary>Вставить вопрос вручную</summary><form id="manualForm" class="lesson-fields"><label style="grid-column:1/-1">Вопрос и варианты<textarea id="manualQuestion" required minlength="3" maxlength="6000" rows="3"></textarea></label><button class="tiny" type="submit">Ответить</button></form></details>
  </section>
  <div class="toast" id="toast" role="status" hidden></div>
-</main><script src="./config.js"></script><script src="./arithmetic.js?v=3214" defer></script><script src="./panel.js?v=3216" defer></script></body></html>
+</main><script src="./config.js"></script><script src="./arithmetic.js?v=3214" defer></script><script src="./panel.js?v=3217" defer></script></body></html>
