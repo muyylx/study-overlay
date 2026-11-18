@@ -44,23 +44,76 @@
     } catch { return null; }
   }
 
+  // Substitute each displayed value in the original equation, including its denominators.
+  function checkCandidates(expression, choices) {
+    const sides = expression.replace(/[хХX]/gu, 'x').replace(/[−–—]/gu, '-').split('=');
+    if (sides.length !== 2 || sides.some(side => !side.trim() || /[^x0-9.,()+*/÷×·\s-]/u.test(side)) || expression.length > 180) return null;
+    function evaluate(side, x) {
+      const tokens = side.match(/\d+(?:[.,]\d+)?|[^\s]/gu) || [];
+      let pos = 0;
+      function atom() {
+        const t = tokens[pos++];
+        if (t === '+' || t === '-') {
+          const [n,d] = atom();
+          return [t === '-' ? -n : n,d];
+        }
+        if (t === '(') {
+          const pair = sum();
+          if (tokens[pos++] !== ')') throw Error();
+          return pair;
+        }
+        if (t === 'x') return x;
+        if (!t || !/^\d+(?:[.,]\d+)?$/u.test(t)) throw Error();
+        return numberPair(t);
+      }
+      function product() {
+        let [n,d] = atom();
+        while (['*','×','·','/','÷'].includes(tokens[pos])) {
+          const op = tokens[pos++], [a,b] = atom();
+          if (op === '/' || op === '÷') {
+            if (!a) throw RangeError();
+            n *= b; d *= a;
+          } else { n *= a; d *= b; }
+        }
+        return [n,d];
+      }
+      function sum() {
+        let [n,d] = product();
+        while (tokens[pos] === '+' || tokens[pos] === '-') {
+          const op = tokens[pos++], [a,b] = product();
+          n = n*b + (op === '-' ? -a : a)*d; d *= b;
+        }
+        return [n,d];
+      }
+      const result = sum();
+      if (pos !== tokens.length) throw Error();
+      return result;
+    }
+    const hits = [];
+    for (const line of choices.trim().split('\n')) {
+      const entry = line.trim().replace(/^\d+\.\s+(?=[A-HА-Д])/iu,'').match(/^([A-HА-Д])[).:\s]+(.+)$/iu);
+      if (!entry) return null;
+      const x = calculate(entry[2]);
+      if (!x) return null;
+      try {
+        const [a,b] = evaluate(sides[0],x), [c,d] = evaluate(sides[1],x);
+        if (a*d === c*b) hits.push(entry[1]+') '+entry[2]);
+      } catch (error) {
+        if (!(error instanceof RangeError)) return null;
+      }
+    }
+    return hits.length === 1 ? hits[0] : null;
+  }
+
   function solve(text) {
     const [question, choices] = text.replace(/^Вопрос \(проверь текст\):\s*/u,'').split(/\nВарианты:\s*\n/u);
     // Parse the whole prompt. Extracting an arbitrary substring can turn a score or an option into the exercise.
     const expression = question.trim()
       .replace(/^(?:виконай(?:те)? (?:дії|додавання(?: зручним способом)?)|спрости(?:ти)? вираз|розв[’'ʼ]яж(?:и|іть) рівняння|виконай(?:те)? дії|обчисл(?:и|іть|ити)|вычисли(?:те|ть)?|знайд(?:и|іть) значення виразу|найди(?:те)? значение выражения|чему равно|сколько (?:будет|получится)|скільки буде)\s*[:：]?\s*/iu,'')
       .replace(/[\s=?？]+$/u,'').trim();
-    const ratio=expression.replace(/х/gu,'x').match(/^\(\s*(x\s*[+−-]\s*\d+)\s*\)\s*\/\s*\(\s*(x\s*[+−-]\s*\d+)\s*\)\s*=\s*(-?\d+)$/u);
-    if(ratio && choices){
-      const hits=[];
-      for(const line of choices.trim().split('\n')){
-        const option=line.trim().match(/^([A-HА-Д])[).:\s]+(-?\d+)$/u);
-        if(!option)continue;
-        const v='('+option[2]+')';
-        const top=calculate(ratio[1].replace('x',v)),bottom=calculate(ratio[2].replace('x',v));
-        if(top&&bottom&&bottom[0]!==0n&&top[0]*bottom[1]===BigInt(ratio[3])*bottom[0]*top[1])hits.push(option[1]+') '+option[2]);
-      }
-      if(hits.length===1)return hits[0];
+    if (choices && expression.includes('=') && /[xх]/iu.test(expression)) {
+      const checked = checkCandidates(expression, choices);
+      if (checked) return checked;
     }
     if (!/[+\-−–—﹣－/]/u.test(expression)) return null;
     let result = calculate(expression);
