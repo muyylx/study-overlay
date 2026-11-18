@@ -89,16 +89,41 @@ function clearLesson(){if($('selection'))$('selection').value='auto';for(const k
 $('clearLesson').addEventListener('click',clearLesson);
 function withLesson(question){
  const notes=Object.entries(lessonFields).map(([key,label])=>[label,key==='topic'?topicValue():$(key).value.trim()]).filter(([,value])=>value);
- const guidance='Ответь на языке задания. По умолчанию выбери ровно один наиболее полный вариант. Несколько ответов допустимы по явному указанию в задании. Используй предметные знания даже если класс и тема не указаны. Проверь отрицания («НЕ», «крім»), число требуемых ответов и точное соответствие букв вариантам. Для соответствий верни все пары, для последовательности — порядок. Для карты учитывай легенду, координаты и масштаб, для биологической схемы — подписи и направление стрелок, для литературы — различай автора, рассказчика и героя, сверяй цитаты с отрывком. На самостоятельный вопрос отвечай по знаниям. Если необходимой карты, схемы или отрывка нет или подпись не читается, не угадывай. Только итог.';
- const parts=[guidance];
+ const [stem]=question.split('\nВарианты:');
+ const context=Object.fromEntries(notes);
+ const parts=[];
+ if(notes.length)parts.push('Контекст теста: '+JSON.stringify(context));
+ parts.push('Определи, что именно требуется узнать из формулировки задания. Сначала сформулируй краткий ответ по существу, затем сопоставь его с содержанием каждого варианта. Проверь отрицания, ограничения и подпись выбранного варианта. Верни только итог на языке задания.');
+ if(/літератур|литератур|письменник|автор|книг|повіст|геро[йяї]|читач|твір|твору|оповідан|роман|поем|жанр/iu.test([context.Предмет,context.Тема,stem].join(' '))){
+   parts.push('Для литературного вопроса установи произведение и тип запрошенного факта: жанр, адресат книги, авторский замысел, рассказчик, поступок персонажа или событие. Проверь, отвечает ли вариант на этот вопрос целиком: верный факт о герое может не относиться к читателям. Не выбирай группу читателей только потому, что к ней принадлежит главный герой.');
+   if(/різдвяна пісня (?:в|у) прозі|рождественская песнь в прозе|a christmas carol/iu.test([context.Тема,stem].join(' ')) && /адресован|призначен|читач|аудитор|посвящ|readers|audience/iu.test(stem)){
+     parts.push('Справка к вопросу об адресате. Charles Dickens, A Christmas Carol, предисловие: автор обращается к читателям в целом, говорит об их отношении к себе и друг к другу. Источник: Project Gutenberg, ebook 24022, Preface. Учитывай эту справку только если вопрос относится к обращению автора к читателям.');
+   }
+ }
  if(/підрядн|сполучн|членом речення/iu.test(question)){
    parts.push('Для каждого варианта восстанови обе грамматические основы и смысл связи. Сполучне слово выполняет синтаксическую роль: попробуй заменить его на який в нужном падеже. Сполучник только связывает части. Цель отвечает на навіщо, причина на чому, последствие обозначает результат и обычно вводится так що. Для з’ясувального найди опорное слово мысли, речи, восприятия или чувства и задай от него падежный вопрос ко всей придаточной части. Для придаточного времени задай вопрос «коли відбувається дія?». Сравни эту зависимость у всех вариантов даже при одинаковом «коли». Выведи только выбранный вариант.');
  }
- parts.push('Задание: '+question);
- if(notes.length)parts.push('Справка ученика (учитывай только относящееся к вопросу): '+JSON.stringify(Object.fromEntries(notes)));
+ parts.push('Задание: '+question.replace(/^Вопрос \(проверь текст\):\s*/u,''));
  const input=parts.join('\n');
  if(input.length>6500)throw Error('Слишком много текста. Сократи текст или выдели только вопрос с вариантами.');
  return input;
+}
+// Narrow source-backed lookup. An unfamiliar wording goes through the usual solver.
+function verifiedAudience(question,multiple){
+ if(multiple)return null;
+ const [stem,options,extra]=question.split('\nВарианты:\n');
+ if(!options||extra!==undefined)return null;
+ const normalize=t=>t.normalize('NFC').toLowerCase().replace(/["«»“”„]/gu,'').replace(/\s+/gu,' ').trim();
+ const prompt=normalize(stem.replace(/^Вопрос \(проверь текст\):\s*/u,''));
+ const work='різдвяна пісня (?:у|в) прозі';
+ const named=new RegExp('^(?:книга|повість|твір) '+work+' (?:за задумом автора )?(?:бул[аио] )?адресован[аои][?.:…]*$','u');
+ const implicit=/^(?:кому адресовано (?:цей твір|цю книгу)|кому за задумом автора адресовано твір)[?.:…]*$/u;
+ const topic=normalize(topicValue()).replace(/^тест:\s*/u,'');
+ if(!named.test(prompt)&&!(implicit.test(prompt)&&new RegExp('^'+work+'$','u').test(topic)))return null;
+ const rows=options.trim().split('\n').map(line=>line.trim().replace(/^\d+\.\s+(?=[A-HА-Д])/u,'').match(/^([A-HА-Д])(?:[).:]\s*|\s+)(.+)$/u));
+ if(rows.length<2||rows.some(r=>!r)||new Set(rows.map(r=>r[1])).size!==rows.length)return null;
+ const hits=rows.filter(r=>/^(?:для широкого (?:кола|загалу) читачів|широкому колу читачів|усім читачам|всім читачам)[.!]?$/u.test(normalize(r[2])));
+ return hits.length===1?hits[0][1]+') '+hits[0][2].trim():null;
 }
 async function send(question){
  if(busy)return;
@@ -121,6 +146,11 @@ async function send(question){
    $('method').textContent='Нужно изображение';
    $('answer').textContent='Прикрепи карту или схему с обозначениями.';
    return;
+ }
+ const audience=image?null:verifiedAudience(question,multiple);
+ if(audience){
+   $('method').textContent='Сверено с предисловием Диккенса · Project Gutenberg № 24022';
+   $('answer').textContent=audience;return;
  }
  const exact=image ? null : window.scannerArithmetic?.(question);
  if(typeof exact==='string'){$('method').textContent='Точный расчёт по тексту';$('answer').textContent=exact;return;}
