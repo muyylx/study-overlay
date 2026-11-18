@@ -44,12 +44,8 @@
     } catch { return null; }
   }
 
-  // Substitute each displayed value in the original equation, including its denominators.
-  function checkCandidates(expression, choices) {
-    const sides = expression.replace(/[хХX]/gu, 'x').replace(/[−–—]/gu, '-').split('=');
-    if (sides.length !== 2 || sides.some(side => !side.trim() || /[^x0-9.,()+*/÷×·\s-]/u.test(side)) || expression.length > 180) return null;
-    function evaluate(side, x) {
-      const tokens = side.match(/\d+(?:[.,]\d+)?|[^\s]/gu) || [];
+  function evaluate(side, x) {
+      const tokens = side.replace(/(\d|\))(?=x|\()/gu, '$1*').match(/\d+(?:[.,]\d+)?|[^\s]/gu) || [];
       let pos = 0;
       function atom() {
         const t = tokens[pos++];
@@ -62,7 +58,7 @@
           if (tokens[pos++] !== ')') throw Error();
           return pair;
         }
-        if (t === 'x') return x;
+        if (t === 'x' && x) return x;
         if (!t || !/^\d+(?:[.,]\d+)?$/u.test(t)) throw Error();
         return numberPair(t);
       }
@@ -89,6 +85,11 @@
       if (pos !== tokens.length) throw Error();
       return result;
     }
+
+  // Substitute each displayed value in the original equation, including its denominators.
+  function checkCandidates(expression, choices) {
+    const sides = expression.replace(/[хХX]/gu, 'x').replace(/[−–—]/gu, '-').split('=');
+    if (sides.length !== 2 || sides.some(side => !side.trim() || /[^x0-9.,()+*/÷×·\s-]/u.test(side)) || expression.length > 180) return null;
     const hits = [];
     for (const line of choices.trim().split('\n')) {
       const entry = line.trim().replace(/^\d+\.\s+(?=[A-HА-Д])/iu,'').match(/^([A-HА-Д])[).:\s]+(.+)$/iu);
@@ -115,8 +116,13 @@
       const checked = checkCandidates(expression, choices);
       if (checked) return checked;
     }
-    if (!/[+\-−–—﹣－/]/u.test(expression)) return null;
+    if (!/[+\-−–—﹣－/*×·÷]/u.test(expression)) return null;
     let result = calculate(expression);
+    if (!result && expression.length <= 180 && /^[0-9.,()+*/×·÷\s−–—-]+$/u.test(expression)) {
+      try { result = evaluate(expression.replace(/[−–—]/gu, '-'), null); }
+      catch { return null; }
+      if (result[1] < 0n) result = [-result[0], -result[1]];
+    }
     if (!result && /[a-zх]/i.test(expression)) {
       // With only addition and subtraction, evaluating at zero and each basis vector
       // recovers the constant and every coefficient exactly.

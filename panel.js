@@ -2,6 +2,7 @@
 'use strict';
 const cfg=window.STUDY_CONFIG||{}, api=String(cfg.apiBase||'').replace(/\/$/,'');
 const $=id=>document.getElementById(id);
+let photoRevision=0,sessionRevision=0;
 let token='',device='',me=null,image='',popup=null,pairNonce='',busy=false,awaitingRead=false;
 const hostParam=new URL(location.href).searchParams.get('host');
 let parentOrigin='';
@@ -27,7 +28,7 @@ async function ownerRelease(user){
 function view(on){ownerRelease(on?me:null);$('loginState').hidden=on;$('workState').hidden=!on;if(on){$('who').textContent=me.name;$('remaining').textContent=me.remaining===null?'Без личного лимита':`${me.remaining} осталось`;}}
 async function request(path,method='GET',data=null){if(!api.startsWith('https://'))throw Error('Не настроен адрес облачного сервера.');const headers={'content-type':'application/json','authorization':'Bearer '+token,'x-study-device':device};let r;try{r=await fetch(api+path,{signal:AbortSignal.timeout(path==='/ask'?16000:60000),method,headers,body:data===null?undefined:JSON.stringify(data),cache:'no-store'});}catch(e){if(e?.name==='TimeoutError'||e?.name==='AbortError')throw Error('Время ожидания ответа истекло. Попробуй ещё раз.');throw Error('Не удалось соединиться с сервером.');}const res=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(Error(res.error||'Ошибка сервера'),{status:r.status});return res;}
 async function validate(){const res=await request('/me');me=res.user;view(true);return res;}
-function clear(){clearLesson();token='';device='';me=null;remove();view(false);}
+function clear(){sessionRevision++;clearLesson();token='';device='';me=null;remove();view(false);}
 function tokenFromStorage(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');if(s&&/^[a-f0-9]{64}$/.test(s.token||'')&&/^[a-f0-9]{64}$/.test(s.device||'')){token=s.token;device=s.device;return true;}}catch{}return false;}
 function id(){const a=crypto.getRandomValues(new Uint8Array(16));return Array.from(a,x=>x.toString(16).padStart(2,'0')).join('');}
 $('connect').addEventListener('click',()=>{
@@ -45,7 +46,11 @@ window.addEventListener('message',async event=>{
  catch(e){clear();msg('Не удалось подключиться: '+e.message);}
 });
 $('disconnect').addEventListener('click',()=>{clear();msg('Панель отключена. Аккаунт на основном сайте сохранён.');});
-async function refresh(){try{await validate();}catch(e){if(e.status===401)clear();msg(e.message);}}
+async function refresh(){
+ const revision=sessionRevision;
+ try{const res=await request('/me');if(revision===sessionRevision){me=res.user;view(true);}}
+ catch(e){if(revision!==sessionRevision)return;if(e.status===401)clear();msg(e.message);}
+}
 const lessonFields={grade:'Класс',subject:'Предмет',topic:'Тема'};
 let detectedTopic='', inferred=false, finding=false, searchRound=0;
 function topicValue(){return $('topic').value.trim()||detectedTopic;}
@@ -85,12 +90,30 @@ window.addEventListener('message',event=>{
  if(!parentOrigin||event.origin!==parentOrigin||event.source!==window.parent||window===window.parent)return;
  if(event.data?.type==='STUDY_OVERLAY_TOPIC')setDetectedTopic(event.data.topic);
 });
-function clearLesson(){if($('selection'))$('selection').value='auto';for(const key of Object.keys(lessonFields))$(key).value='';showTopic();}
+function clearLesson(){if($('passage'))$('passage').value='';if($('selection'))$('selection').value='auto';for(const key of Object.keys(lessonFields))$(key).value='';showTopic();}
 $('clearLesson').addEventListener('click',clearLesson);
 // Editorial summaries are selected by work and question, never by option position.
 function lessonReference(topic,question){
  const named=/вітька\s*(?:\+|і|и|та)\s*галя|повість про перше кохання/iu;
- const distinctive=/великі чаплі|вітьк[аоиу] гороб|федько котигорош/iu;
+ const distinctive=/великі чаплі|вітьк[аоиуі] гороб|федько котигорош|дуел.{0,48}вітьк|вітьк.{0,48}дуел/iu;
+ const bulba=/тарас.{1,12}бульб|андрій.{0,18}панноч|панноч.{0,20}андрі/iu;
+ if(bulba.test(topic+' '+question)){
+   const chapter=/хліб|хлеб|передати|передать/iu.test(question) ? 5 : /панноч|вітчизн|батьківщин/iu.test(question) ? 6 : /привіта|привет|розлук|разлук/iu.test(question) ? 1 : 0;
+   const scenes={1:'Повернувшись із бурси, Остап вступає з батьком у кулачний бій.',5:'Панночка через служницю просить Андрія дати хліба її голодній матері.',6:'Андрій приносить їжу. У розмові з панночкою він називає її своєю вітчизною.'};
+   const notes=[
+     [/навча|вчил|учил|бурс/iu,'Остап і молодший Андрій навчаються в київській бурсі, потім повертаються до батьківського дому.'],
+     [/підзем|подзем|служниц|пров[іе]в|провел/iu,'Татарка, служниця панночки, проводить Андрія підземним ходом до міста Дубна, яке перебуває в облозі.'],
+     [/загуб|згуб|упуст|потер|схопил/iu,'Тарас затримується шукати люльку, що випала. Під час затримки його захоплюють.'],
+     [/доля.{0,30}андрі|помер.{0,15}андр|загину.{0,14}андр/iu,'Андрій переходить до супротивника. Тарас зустрічає сина і власноруч стріляє в нього.'],
+     [/поклик|відгук|страт[аиі]|казн/iu,'Остапа страчують у Варшаві. Він кличе батька, і з натовпу відповідає Тарас.']
+   ];
+   const note=notes.find(([pattern])=>pattern.test(question));
+   if(note)return {fact:note[1],url:'https://www.ukrlib.com.ua/world/printit.php?tid=15'};
+   if(chapter)return {fact:scenes[chapter],url:'https://www.gutenberg.org/ebooks/1197',chapter};
+ }
+ if(/різдвяна пісня|рождественская песнь|скрудж|christmas carol/iu.test(topic+' '+question) && /відправив|надіслав|індич|послал|отправил/iu.test(question)){
+   return {fact:'На різдвяний ранок Скрудж купує велику індичку і посилає її родині свого службовця Боба Кретчита.',url:'https://www.gutenberg.org/ebooks/46'};
+ }
  if(!named.test(topic+' '+question)&&!distinctive.test(question))return null;
  const records=[
    [/дуел|подія|липня|ставк/iu,'25 липня у Великих Чаплях запланували дуель. Суперником Вітьки був Петро Білий.','https://uahistory.co/pidruchniki/mischenko-ukraine-literature-8-class-2016/25.php'],
@@ -107,6 +130,8 @@ function withLesson(question){
  const parts=[];
  const reference=lessonReference(context.Тема||'',stem);
  if(reference)parts.push('Джерело до завдання — переказ фрагмента про відповідний епізод: '+reference.fact+' Зістав факт з усіма варіантами, врахуй заперечення.');
+ const passage=$('passage')?.value?.trim();
+ if(passage)parts.push('Отрывок ученика для сверки фактов: '+JSON.stringify(passage.slice(0,1500)));
  if(notes.length)parts.push('Контекст теста: '+JSON.stringify(context));
  parts.push('Определи, что именно требуется узнать из формулировки задания. Сначала сформулируй краткий ответ по существу, затем сопоставь его с содержанием каждого варианта. Проверь отрицания, ограничения и подпись выбранного варианта. Верни только итог на языке задания.');
  if(/літератур|литератур|письменник|автор|книг|повіст|геро[йяї]|читач|твір|твору|оповідан|роман|поем|жанр/iu.test([context.Предмет,context.Тема,stem].join(' '))){
@@ -120,6 +145,7 @@ function withLesson(question){
  }
  parts.push('Задание: '+question.replace(/^Вопрос \(проверь текст\):\s*/u,''));
  const input=parts.join('\n');
+ if(input.length>6500 && question.length<6400){const room=6500-question.length-12;return (parts.slice(0,-1).join('\n').slice(0,room)+'\nЗадание: '+question);}
  if(input.length>6500)throw Error('Слишком много текста. Сократи текст или выдели только вопрос с вариантами.');
  return input;
 }
@@ -156,6 +182,15 @@ function displayAnswer(answer,question){
 async function send(question){
  if(busy)return;
  const divider='\nВарианты:\n';
+ question=question.replace(/\r\n?/gu,'\n');
+ // A copied exercise often has labels but no line introducing its choices.
+ if(!question.includes(divider)){
+   const lines=question.trim().split('\n');
+   const first=lines.findIndex(line=>/^\s*[A-HА-Д][).:]\s+\S/u.test(line));
+   if(first>0 && lines.length-first>=2 && lines.slice(first).every(line=>/^\s*[A-HА-Д][).:]\s+\S/u.test(line))){
+     question=lines.slice(0,first).join('\n')+divider+lines.slice(first).join('\n');
+   }
+ }
  const pos=question.indexOf(divider);
  let multiple=$('selection')?.value==='multiple';
  if(pos>=0){
@@ -166,6 +201,10 @@ async function send(question){
    question=question.slice(0,pos)+(kept.length?divider+kept.join('\n'):'');
  }
  $('readout').hidden=false;$('readText').textContent=question||'Только фото';$('method').textContent='';
+ if(!image && topicValue() && (!question || question.trim()===topicValue() || /^(?:Тема|Назва тесту|Название теста):[^\n]+$/iu.test(question.trim()))){
+   $('answer').textContent='Тема: '+topicValue()+'. Для выбора ответа нужен сам вопрос. Выдели его на странице или прикрепи фото.';
+   return;
+ }
  if(!question&&!image){$('answer').textContent='Вопрос не найден. Выдели текст задания или прикрепи скриншот.';msg('Не удалось прочитать вопрос. Прикрепи скриншот через скрепку.');return;}
  const prompt=question.split(/\nВарианты:/u)[0];
  const referencesFigure=/(?:на|за|по)\s+(?:схем[іеу]|карт[іеу]|рисунк[уе]|малюнк[уе]|ілюстрації|изображении|фото)/iu.test(prompt);
@@ -175,21 +214,30 @@ async function send(question){
    $('answer').textContent='Прикрепи карту или схему с обозначениями.';
    return;
  }
+ multiple ||=/оберіть (?:усі|всі|два|три)|выберите (?:все|два|три)|select all|choose (?:two|three)/iu.test(prompt);
  const audience=image?null:verifiedAudience(question,multiple);
  if(audience){
    $('method').textContent='Сверено с предисловием Диккенса · Project Gutenberg № 24022';
    $('answer').textContent=audience;return;
  }
- const exact=image ? null : window.scannerArithmetic?.(question);
+ const exact=image || multiple ? null : window.scannerArithmetic?.(question);
  if(typeof exact==='string'){$('method').textContent='Точный расчёт по тексту';$('answer').textContent=exact;return;}
  $('method').textContent=image?'Модель · прикреплено фото':'Модель · текст';
  const reference=!image&&lessonReference(topicValue(),prompt);
  if(reference)$('method').textContent='Модель · сверка с текстом произведения: '+reference.url;
  const submittedImage=image;
+ const submittedSession=sessionRevision;
  if(submittedImage)question+='\nСверь условие, выделенные слова и все варианты по приложенному снимку. При расхождении текста страницы со снимком используй задание на снимке.';
  busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
- try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});$('answer').textContent=submittedImage||multiple?response.answer:displayAnswer(response.answer,question);if(submittedImage&&image===submittedImage)$('removePhoto').click();await refresh();}
- catch(e){$('answer').textContent='Ошибка: '+e.message;if(e.status===401)clear();}
+ try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;$('answer').textContent=submittedImage||multiple?response.answer:displayAnswer(response.answer,question);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
+ catch(e){
+   if(submittedSession!==sessionRevision)return;
+   if(reference && (!e.status || [429,502,503,504].includes(e.status))){
+     $('answer').textContent='Ответ модели не подтверждён. По тексту произведения: '+reference.fact;
+     $('method').textContent='Справка к вопросу · '+reference.url;
+   }else $('answer').textContent='Ошибка: '+e.message;
+   if(e.status===401)clear();
+ }
  finally{busy=false;$('scan').disabled=false;}
 }
 $('editScan').addEventListener('click',()=>{
@@ -231,8 +279,8 @@ async function compressPhoto(file){
  const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');if(!ctx)throw Error('Нет поддержки обработки фото');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
  let result=c.toDataURL('image/jpeg',.86);if(result.length>1_450_000)result=c.toDataURL('image/jpeg',.65);c.width=c.height=0;if(result.length>1_450_000)throw Error('Изображение слишком большое. Обрежь его.');return result;
 }
-$('photo').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{image=await compressPhoto(file);$('photoThumb').src=image;$('imageSection').hidden=false;$('sendPhoto').hidden=false;$('imageName').textContent='📎 '+file.name.slice(0,30);msg('Фото прикреплено');}catch(error){msg(error.message);}e.target.value='';});
-$('removePhoto').addEventListener('click',()=>{image='';$('photoThumb').removeAttribute('src');$('imageSection').hidden=true;$('sendPhoto').hidden=true;});
+$('photo').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;const revision=++photoRevision;try{const compressed=await compressPhoto(file);if(revision!==photoRevision)return;image=compressed;$('photoThumb').src=image;$('imageSection').hidden=false;$('sendPhoto').hidden=false;$('imageName').textContent='📎 '+file.name.slice(0,30);msg('Фото прикреплено');}catch(error){msg(error.message);}e.target.value='';});
+$('removePhoto').addEventListener('click',()=>{photoRevision++;image='';$('photoThumb').removeAttribute('src');$('imageSection').hidden=true;$('sendPhoto').hidden=true;});
 $('sendPhoto').addEventListener('click',()=>send('Прочитай вопрос и варианты на изображении.'));
 if(window.parent===window){
  $('connect').hidden=true; $('loginHelp').textContent='Войди в кабинет и вернись на эту страницу.';
