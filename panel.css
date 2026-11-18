@@ -2,3 +2,11 @@
 
 .media-tip{background:#382d1c;border:1px solid #bf924c;border-radius:9px;color:#ffe6b5;padding:8px 10px;margin:9px 0;font:650 11px/1.35 system-ui,-apple-system,sans-serif;}
 .clip,.icon-button,.tiny{min-width:44px;min-height:44px}.preview{overflow-wrap:anywhere}.preview span{min-width:0}.panel{padding-bottom:max(12px,env(safe-area-inset-bottom))}.media-tip{background:#17263e;border-color:#3b5275;color:#afc4e2}
+
+.answer-head .clip{margin-left:auto}
+.lesson{margin:6px 0;color:#cfdbf4}.lesson summary{cursor:pointer;min-height:44px;padding:12px 0;font-weight:600;font-size:13px}
+.lesson-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:9px}
+.lesson-fields label{font-size:12px;display:grid;align-content:start;gap:4px}
+.lesson-fields label:nth-child(n+3),.lesson-fields small{grid-column:1/-1}
+.lesson-fields input,.lesson-fields textarea{width:100%;box-sizing:border-box;background:#0d1726;color:#eef3ff;border:1px solid #526582;border-radius:8px;padding:9px;font:16px system-ui}
+.lesson-fields small{color:#aabbd6}

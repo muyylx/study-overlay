@@ -16,3 +16,30 @@ input,select,textarea{min-width:0;max-width:100%;font-size:16px!important}.field
 @media(min-width:740px){#page-home:not(.hidden){display:grid;grid-template-columns:1.2fr 1fr;gap:12px;align-items:start}#page-home>*{margin:0}.activity{grid-column:1/-1}}
 @media(max-width:390px){.profile{grid-template-columns:minmax(0,1fr) minmax(0,44%);padding:12px}.identity{gap:7px}.avatar{width:32px;height:32px}.tiles{grid-template-columns:1fr}.fields{grid-template-columns:1fr}.nav{gap:0}.nav button{padding:8px}.topright{gap:1px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* Compact account dashboard */
+body{background:#0d111a}
+.wrap{max-width:830px;padding-inline:max(14px,env(safe-area-inset-left)) max(14px,env(safe-area-inset-right))}
+.top{padding-block:10px}.brandicon{background:#c7ceff;color:#272d55}
+.card{background:#161d29;border-color:#303a4b;border-radius:14px;margin-block:10px;padding:16px}
+.profile{grid-template-columns:minmax(0,1fr) minmax(0,.85fr);background:#161d29}
+.identity h1{font-size:clamp(18px,4vw,25px);line-height:1.15;margin:3px 0}
+.identity p{margin:0}.quota strong{font-size:27px;margin:0}.quota small{line-height:1.35}
+.nav{gap:3px;margin:0;padding:0 0 4px}.nav button{border:0;border-radius:8px;padding:6px 9px;font-size:13px}
+.nav button.active{background:#283451;color:#e5eaff}
+#adminTab{color:#d3ccff;background:#29263d}
+#page-home:not(.hidden){display:grid;grid-template-columns:1fr;gap:9px}
+#page-home>.card{margin:0}
+.launch{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(110deg,#252e50,#27325d 65%,#36436e);border-color:#404c73}
+.launch h2{font-size:24px;letter-spacing:-.04em;margin:0}.launch p{color:#ced6ef;max-width:34ch;margin:7px 44px 14px 0;line-height:1.45}
+.launch .button{gap:16px;background:#d1d8ff;color:#1c2544}
+.scanmark{position:absolute;z-index:-1;right:-13px;top:14px;width:74px;height:74px;border:1px solid #8596d8;border-radius:18px;transform:rotate(-14deg);opacity:.48}
+.scanmark:before,.scanmark:after{content:"";position:absolute;inset:9px;border:1px solid #aab7ef;border-radius:12px}
+.scanmark:after{inset:50% -5px auto;height:1px;background:#cbd4ff}
+.quick.card{padding:0 15px}.quick button{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid #303a4b;border-radius:0;background:transparent;color:#e8ecf5;padding:8px 0;font:inherit;font-weight:550}
+.quick button:last-child{border:0}.quick button span{color:#a6b7dc;font-size:20px}.quick button:hover{color:#becaff}
+.activity.card{padding:0 15px}.activity summary{padding:13px 0;min-height:44px}.activity[open]{padding-bottom:12px}
+.auth{max-width:430px;margin:clamp(18px,5vh,44px) auto}.authcard{padding:clamp(18px,4vw,28px);border-top:2px solid #acbaff}
+.authcard h1{font-size:clamp(26px,6vw,34px);margin:6px 0}.outside a{display:inline-flex;align-items:center;min-height:44px}
+@media(min-width:700px){#page-home:not(.hidden){grid-template-columns:1.1fr 1fr}.launch{display:flex;flex-direction:column;align-items:flex-start;justify-content:center}.activity{grid-column:1/-1}}
+@media(max-width:440px){.nav button{padding-inline:7px}.card{padding:13px}.profile{gap:8px}.identity{gap:8px}.quota{padding-left:10px}.avatar{width:32px;height:32px}}
