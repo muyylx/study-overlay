@@ -15,13 +15,15 @@
   <div class="answer" id="answer" aria-live="polite">Нажми «Просканировать экран», чтобы разобрать текст задания.</div><details class="lesson"><summary>Дополнительная информация</summary>
  <div class="lesson-fields">
  <label>Класс<input id="grade" maxlength="12" placeholder="8"></label>
- <label>Предмет<input id="subject" maxlength="80" placeholder="Зарубежная литература"></label>
+ <label>Предмет<input id="subject" list="subjectChoices" maxlength="80" placeholder="Зарубежная литература"></label>
+ <datalist id="subjectChoices"><option value="География"><option value="Биология"><option value="Зарубежная литература"></datalist>
  <label>Тема, автор или произведение<input id="topic" maxlength="180" placeholder="Антуан де Сент-Экзюпери, «Маленький принц»"></label>
  <label>Отрывок или заметка<textarea id="excerpt" maxlength="3000" rows="3" placeholder="Вставь текст, к которому относится вопрос"></textarea></label>
  <small>Применяется к следующим сканированиям и фото, пока открыта панель.</small>
  <button id="clearLesson" type="button" class="tiny">Очистить</button></div></details><p class="media-tip">⚠ Если задание изображено на картинке, прикрепи скриншот 📎</p>
+  <details class="lesson"><summary>Вставить вопрос вручную</summary><form id="manualForm" class="lesson-fields"><label style="grid-column:1/-1">Вопрос и варианты<textarea id="manualQuestion" required minlength="3" maxlength="6000" rows="3"></textarea></label><button class="tiny" type="submit">Ответить</button></form></details>
   <div class="preview" id="imageSection" hidden><span id="imageName">Фото прикреплено</span><button class="tiny" id="removePhoto" type="button">Убрать ×</button></div>
   <div class="foot"><button id="sendPhoto" class="btn secondary" type="button" hidden>Разобрать фото ✦</button><span id="hint">Читаем только доступный текст страницы</span></div>
  </section>
  <div class="toast" id="toast" role="status" hidden></div>
-</main><script src="./config.js"></script><script src="./arithmetic.js?v=3204" defer></script><script src="./panel.js?v=3204" defer></script></body></html>
+</main><script src="./config.js"></script><script src="./arithmetic.js?v=3204" defer></script><script src="./panel.js?v=3205" defer></script></body></html>
