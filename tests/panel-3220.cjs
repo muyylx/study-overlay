@@ -45,3 +45,8 @@ test('несколько вариантов, контекст и очистка'
 test('неподтвержденный сюжет не подменяется справкой другого произведения',async()=>{
  const ui=panel();ui.field('topic').value='Гамлет';assert.match(await ui.submit('Для кого попросили хліба?'),/Облако недоступно/);
 });
+test('дополнительная проверка для литературы, обычный маршрут для физики',async()=>{
+ const ui=panel();ui.field('topic').value='Українська література';
+ await ui.submit('Хто написав твір?\nA) Автор перший\nB) Автор другий');assert.equal(ui.requests[0].readingReview,true);
+ ui.field('topic').value='Оптика';await ui.submit('Що відбиває світло?\nA) Дзеркало\nB) Тінь');assert.equal(ui.requests[1].readingReview,false);
+});

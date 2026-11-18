@@ -101,7 +101,7 @@ function lessonReference(topic,question){
    const chapter=/хліб|хлеб|передати|передать/iu.test(question) ? 5 : /панноч|вітчизн|батьківщин/iu.test(question) ? 6 : /привіта|привет|розлук|разлук/iu.test(question) ? 1 : 0;
    const scenes={1:'Повернувшись із бурси, Остап вступає з батьком у кулачний бій.',5:'Панночка через служницю просить Андрія дати хліба її голодній матері.',6:'Андрій приносить їжу. У розмові з панночкою він називає її своєю вітчизною.'};
    const notes=[
-     [/навча|вчил|учил|бурс/iu,'Остап і молодший Андрій навчаються в київській бурсі, потім повертаються до батьківського дому.'],
+     [/навча|вчил|учил|бурс|старш.{0,24}син|молодш.{0,24}син/iu,'Старший брат Остап і молодший Андрій навчаються в київській бурсі, потім повертаються до батьківського дому.'],
      [/підзем|подзем|служниц|пров[іе]в|провел/iu,'Татарка, служниця панночки, проводить Андрія підземним ходом до міста Дубна, яке перебуває в облозі.'],
      [/загуб|згуб|упуст|потер|схопил/iu,'Тарас затримується шукати люльку, що випала. Під час затримки його захоплюють.'],
      [/доля.{0,30}андрі|помер.{0,15}андр|загину.{0,14}андр/iu,'Андрій переходить до супротивника. Тарас зустрічає сина і власноруч стріляє в нього.'],
@@ -225,11 +225,12 @@ async function send(question){
  $('method').textContent=image?'Модель · прикреплено фото':'Модель · текст';
  const reference=!image&&lessonReference(topicValue(),prompt);
  if(reference)$('method').textContent='Модель · сверка с текстом произведения: '+reference.url;
+ const readingReview=!image && !multiple && !reference && /літератур|литератур|автор|роман|твор[уіе]|повіст|скрудж|бульб|лісов[аі] пісн|геро[йяї]|поем|повест|гоголь|диккенс|діккенс|письменник/iu.test([topicValue(),$('subject').value,prompt].join(' '));
  const submittedImage=image;
  const submittedSession=sessionRevision;
  if(submittedImage)question+='\nСверь условие, выделенные слова и все варианты по приложенному снимку. При расхождении текста страницы со снимком используй задание на снимке.';
  busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
- try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;$('answer').textContent=submittedImage||multiple?response.answer:displayAnswer(response.answer,question);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
+ try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;$('answer').textContent=submittedImage||multiple?response.answer:displayAnswer(response.answer,question);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
  catch(e){
    if(submittedSession!==sessionRevision)return;
    if(reference && (!e.status || [429,502,503,504].includes(e.status))){
