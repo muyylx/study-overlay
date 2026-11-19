@@ -126,8 +126,13 @@
     } catch { return null; }
   }
 
+  function plainMath(text){
+    if(/\d\s*\\d?frac/u.test(text))return text;
+    return text.replace(/^\$([^$]+)\$$/u,'$1').replace(/\\[(]|\\[)]/gu,'').replace(/\\(?:d?frac)\s*\{([+-]?\d+)\}\s*\{(\d+)\}/gu,'($1/$2)').replace(/\\frac(\d)(\d)/gu,'($1/$2)').replace(/\\cdot/gu,'·').replace(/\\times/gu,'×');
+  }
+
   function numericChoice(text) {
-    const clean=text.trim().replace(/[−–—﹣－]/gu,'-').replace(/⁄/gu,'/');
+    const clean=plainMath(text).trim().replace(/[.;]$/u,'').replace(/[−–—﹣－]/gu,'-').replace(/⁄/gu,'/');
     const mixed=clean.match(/^([+-]?)(\d+)\s+(\d+)\s*\/\s*(\d+)$/u);
     if(mixed){
       const [,sign,whole,part,base]=mixed;
@@ -157,7 +162,8 @@
   function solve(text) {
     const [question, choices] = text.replace(/^Вопрос \(проверь текст\):\s*/u,'').split(/\nВарианты:\s*\n/u);
     // Parse the whole prompt. Extracting an arbitrary substring can turn a score or an option into the exercise.
-    const expression = question.trim()
+    const expression = plainMath(question).trim().replace(/^\d+[.)]\s+(?=\p{L})/u,'')
+      .replace(/^(?:обчисл(?:іть|и|ити)(?:\s+(?:значення виразу|різницю|суму))?|знайдіть (?:значення суми|різницю)|чому дорівнює сума|виконайте дію)\s*[.:：]?\s*/iu,'')
       .replace(/^(?:виконай(?:те)? (?:дії|додавання(?: зручним способом)?)|спрости(?:ти)? вираз|розв[’'ʼ]яж(?:и|іть) рівняння|реши(?:те)? уравнение|solve(?: for x)?|виконай(?:те)? дії|обчисл(?:и|іть|ити)|вычисли(?:те|ть)?|знайд(?:и|іть) значення виразу|найди(?:те)? значение выражения|чему равно|сколько (?:будет|получится)|скільки буде)\s*[:：]?\s*/iu,'')
       .replace(/[\s=?？]+$/u,'').trim();
     if (choices && expression.includes('=') && /[xх]/iu.test(expression)) {

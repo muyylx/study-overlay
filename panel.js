@@ -292,6 +292,10 @@ async function send(question,force=false,fromCheckbox=false){
    multiple ||= lines.some(line=>action.test(line.trim()));
    const kept=lines.filter(line=>!action.test(line.trim())&&!/^(?:далі|діслексія|дислексія|завершити|наступне|назад|submit)$/iu.test(line.trim()));
    const options=kept.map(row=>row.trim()).filter(Boolean);
+   const oldLabels=options.map(row=>row.match(/^(?:\d+[.)]\s+)?([A-HА-Д])[).:]\s*(.+)$/u));
+   if(oldLabels.every(Boolean)&&new Set(oldLabels.map(m=>m[1])).size===options.length){
+     for(let i=0;i<options.length;i++)options[i]=oldLabels[i][1]+') '+oldLabels[i][2];
+   }
    // Sites often render the letter and a numeric value as separate spans.
    for(let i=0;i<options.length;i++){
      options[i]=options[i].replace(/^([A-HА-Д])\s+(?=[+−–—-]?\s*\d)/u,'$1) ');
