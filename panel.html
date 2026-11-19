@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101827"><title>scanner test by muyylx · Панель</title><link rel="stylesheet" href="./panel.css?v=3504"></head>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101827"><title>scanner test by muyylx · Панель</title><link rel="stylesheet" href="./panel.css?v=3600"></head>
 <body><main class="panel" role="main">
  <section class="state" id="loginState" hidden>
   <div class="status-icon">◈</div>
@@ -15,7 +15,7 @@
   <div class="preview" id="imageSection" hidden><img id="photoThumb" alt="Прикреплённый снимок"><span id="imageName"></span><button id="sendPhoto" class="tiny" hidden>Разобрать фото</button><button class="tiny" id="removePhoto" aria-label="Убрать снимок">×</button></div>
   <div id="cardPicker" class="lesson" hidden><label for="cardSelect">На экране несколько заданий</label><select id="cardSelect"></select><button id="solveCard" class="tiny" type="button">Разобрать выбранное</button></div>
   <div class="answer-head"><strong>Ответ</strong><small id="ownerRelease" hidden role="status" style="margin-left:6px;font-size:11px;color:#b8caff"></small></div>
-  <small id="method" class="result-method" role="status"></small><div class="answer" id="answer" aria-live="polite">Нажми «Просканировать экран», чтобы разобрать текст задания.</div><div id="resultTools" hidden><button class="tiny" type="button" id="copyResult">Скопировать ответ</button><button class="tiny" type="button" id="recheck">Проверить заново</button></div>
+  <small id="method" class="result-method" role="status"></small><div class="answer" id="answer" aria-live="polite">Нажми «Просканировать экран», чтобы разобрать текст задания.</div><details id="group" class="lesson" hidden><summary>Ответы участников</summary><pre id="groupText" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details><div id="resultTools" hidden><button class="tiny" type="button" id="copyResult">Скопировать ответ</button><button class="tiny" type="button" id="recheck">Проверить заново</button></div>
   <details class="lesson" id="recent" hidden><summary>Последние ответы <span id="recentCount"></span></summary><div id="recentList"></div><button type="button" id="clearRecent" class="tiny">Очистить историю</button></details>
   <details class="lesson" id="readout" hidden><summary>Что прочитала панель</summary><pre id="readText" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre><button type="button" id="editScan" class="tiny">Исправить текст</button></details><details class="lesson"><summary>Дополнительная информация</summary>
  <div class="lesson-fields"><label>Выбор ответов (не обязательно)<select id="selection"><option value="auto">Автоматически</option><option value="multiple">Несколько</option></select></label>
@@ -29,4 +29,4 @@
   <details class="lesson" id="manualBox"><summary>Вставить вопрос вручную</summary><form id="manualForm" class="lesson-fields"><label style="grid-column:1/-1">Вопрос и варианты<textarea id="manualQuestion" required minlength="3" maxlength="6500" rows="3"></textarea></label><button class="tiny" type="submit">Ответить</button></form></details>
  </section>
  <div class="toast" id="toast" role="status" hidden></div>
-</main><script src="./config.js"></script><script src="./units.js?v=3504" defer></script><script src="./arithmetic.js?v=3504" defer></script><script src="./panel.js?v=3504" defer></script></body></html>
+</main><script src="./config.js"></script><script src="./units.js?v=3600" defer></script><script src="./arithmetic.js?v=3600" defer></script><script src="./panel.js?v=3600" defer></script></body></html>

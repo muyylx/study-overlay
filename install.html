@@ -12,7 +12,7 @@
 <div class="card"><h2>Как подключить уже существующий аккаунт?</h2><p>Авторизуйся на <a href="./index.html">основном сайте</a>. Открой панель, нажми «Подключить аккаунт», подтверди его во вкладке, вернись к заданию. Повторно вводить код приглашения не нужно.</p><p class="muted">На некоторых сайтах Safari блокирует такие панели или передачу данных. Это браузерное ограничение, а не новый аккаунт.</p></div>
 <a class="outline button" href="https://t.me/admiiiiiiinnns" target="_blank" rel="noopener noreferrer">✉ Помощь с установкой · @admiiiiiiinnns</a>
 <p class="muted tiny">Иллюстрации схематичные; кнопки Safari могут выглядеть иначе в разных версиях iOS.</p>
-</main><script src="./reader.js?v=3504"></script><script>
+</main><script src="./reader.js?v=3600"></script><script>
 function studyOverlayQuick(url,readCards){
 'use strict';
 const ID='study-overlay-3-quick-panel';
@@ -103,7 +103,13 @@ const timer=setTimeout(()=>{s.append(fallback);frame.hidden=true;frame.style.dis
 const onMsg=e=>{if(!h.isConnected){removeEventListener('message',onMsg);return;}if(e.source!==frame.contentWindow||e.origin!==origin||!e.data)return;if(e.data.type==='STUDY_PANEL_READY'){clearTimeout(timer);fallback.remove();frame.style.display='';frame.hidden=false;frame.contentWindow.postMessage({type:'STUDY_OVERLAY_TOPIC',topic:pageTopic()},origin);}if(e.data.type==='STUDY_OVERLAY_READ_PAGE'){let text='',cards=[],issue='';
  try{
    const selection=String(getSelection()?.toString()||'').trim();
-   if(selection.length>2)text=selection.slice(0,6500);
+   if(selection.length>2){
+     const clean=value=>value.replace(/\s+/gu,' ').trim().toLowerCase();
+     const needle=clean(selection);
+     const matches=readCards(document,visible).cards.filter(card=>clean(card.text).includes(needle));
+     if(matches.length===1){cards=matches;text=matches[0].text;}
+     else text=selection.slice(0,6500);
+   }
    else {
      const found=readCards(document,visible);cards=found.cards;
      if(!found.recognized)text=read();
@@ -116,7 +122,7 @@ addEventListener('message',onMsg);
 (document.body||document.documentElement).appendChild(h);place();
 }
 
-const site='https://muyylx.github.io/study-overlay/panel.html?v=3504';
+const site='https://muyylx.github.io/study-overlay/panel.html?v=3600';
 const code='javascript:'+encodeURIComponent('('+studyOverlayQuick.toString()+')('+JSON.stringify(site)+','+window.studyReadCards.toString()+');');
 document.getElementById('code').value=code;
 document.getElementById('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(code);document.getElementById('copyStatus').textContent='✅ Код скопирован. Теперь вставь его в адрес закладки.';}catch{const ta=document.getElementById('code');ta.focus();ta.select();document.getElementById('copyStatus').textContent='Выделено: нажми «Копировать» в меню Safari.';}});

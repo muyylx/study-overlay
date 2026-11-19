@@ -26,7 +26,7 @@ async function ownerRelease(user){
  }catch{if(me?.role==='admin'&&me.id===user.id){badge.textContent='Версию подтвердить не удалось';releaseUser=null;}}
 }
 function view(on){ownerRelease(on?me:null);$('loginState').hidden=on;$('workState').hidden=!on;if(on){$('who').textContent=me.name;$('remaining').textContent=me.remaining===null?'Без личного лимита':`${me.remaining} осталось`;}}
-async function request(path,method='GET',data=null){if(!api.startsWith('https://'))throw Error('Не настроен адрес облачного сервера.');const headers={'content-type':'application/json','authorization':'Bearer '+token,'x-study-device':device};let r;try{r=await fetch(api+path,{signal:AbortSignal.timeout(path==='/ask'?(data?.image?23500:16000):60000),method,headers,body:data===null?undefined:JSON.stringify(data),cache:'no-store'});}catch(e){if(e?.name==='TimeoutError'||e?.name==='AbortError')throw Error('Время ожидания ответа истекло. Попробуй ещё раз.');throw Error('Не удалось соединиться с сервером.');}const res=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(Error(res.error||'Ошибка сервера'),{status:r.status});return res;}
+async function request(path,method='GET',data=null){if(!api.startsWith('https://'))throw Error('Не настроен адрес облачного сервера.');const headers={'content-type':'application/json','authorization':'Bearer '+token,'x-study-device':device};let r;try{r=await fetch(api+path,{signal:AbortSignal.timeout(path==='/ask'?(data?.image?54000:46000):60000),method,headers,body:data===null?undefined:JSON.stringify(data),cache:'no-store'});}catch(e){if(e?.name==='TimeoutError'||e?.name==='AbortError')throw Error('Время ожидания ответа истекло. Попробуй ещё раз.');throw Error('Не удалось соединиться с сервером.');}const res=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(Error(res.error||'Ошибка сервера'),{status:r.status});return res;}
 async function validate(){const res=await request('/me');me=res.user;view(true);return res;}
 function clear(){clearRecent();$('answer').textContent='';$('readText').textContent='';$('manualQuestion').value='';$('removePhoto').click();sessionRevision++;clearLesson();token='';device='';me=null;remove();view(false);}
 function tokenFromStorage(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');if(s&&/^[a-f0-9]{64}$/.test(s.token||'')&&/^[a-f0-9]{64}$/.test(s.device||'')){token=s.token;device=s.device;return true;}}catch{}return false;}
@@ -239,12 +239,16 @@ function renderRecent(){
 }
 function showResult(item,method){
  activeResult=item;
+ $('group').hidden=!item.team;
+ $('group').open=false;
+ $('groupText').textContent=item.team?.rows?.map(r=>r.name+' · '+(r.answer||r.status)+(r.reason?' — '+r.reason:'')).join('\n\n')||'';
  $('answer').textContent=item.answer;
  $('method').textContent=method;
  $('resultTools').hidden=false;
  $('recheck').hidden=!item.key;
 }
 function resetResult(){
+ $('group').hidden=true;
  $('method').textContent='';activeResult=null;$('resultTools').hidden=true;
 }
 function clearRecent(){
@@ -306,7 +310,7 @@ async function send(question,force=false,fromCheckbox=false){
    }
    question=question.slice(0,pos)+(options.length?divider+options.join('\n'):'');
  }
- $('readout').hidden=false;$('readText').textContent=question||'Только фото';$('method').textContent='';
+ $('group').hidden=true;$('readout').hidden=false;$('readText').textContent=question||'Только фото';$('method').textContent='';
  if(!image && topicValue() && (!question || question.trim()===topicValue() || /^(?:Тема|Назва тесту|Название теста):[^\n]+$/iu.test(question.trim()))){
    $('answer').textContent='Тема: '+topicValue()+'. Для выбора ответа нужен сам вопрос. Выдели его на странице или прикрепи фото.';
    return;
@@ -338,9 +342,9 @@ async function send(question,force=false,fromCheckbox=false){
    showResult(previous,'Повторный вопрос · '+previous.method);return;
  }
  let submittedReadout='';
- function complete(answer,method){
+ function complete(answer,method,team=null){
    if(typeof answer!=='string'||!answer.trim())throw Error('Получен пустой ответ');
-   const item={key,question:submittedReadout||question,answer,method,fromCheckbox,time:Date.now()};
+   const item={key,question:submittedReadout||question,answer,method,team,fromCheckbox,time:Date.now()};
    if(key && !/недостат(?:очно|ньо) дан|не удалось подтвердить/iu.test(answer)){
      recentAnswers.delete(key);recentAnswers.set(key,item);
      if(recentAnswers.size>10)recentAnswers.delete(recentAnswers.keys().next().value);
@@ -364,10 +368,11 @@ async function send(question,force=false,fromCheckbox=false){
  const submittedImage=image;
  const submittedSession=sessionRevision;
  if(submittedImage)question+='\nСверь условие, выделенные слова и все варианты по приложенному снимку. При расхождении текста страницы со снимком используй задание на снимке.';
- busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
+ busy=true;$('scan').disabled=true;$('answer').textContent='Команда читает задание и сверяет варианты…';
  try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,contextScan:true,scanPhoto:!!submittedImage,lesson:contextFor(prompt),topic:topicValue(),question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;if(response.scan){submittedReadout=response.scan.text;$('readText').textContent=response.scan.text;topicFromScan({topic:response.scan.topic||topicValue(),author:response.lesson?.author,subject:response.lesson?.subject},response.scan.text);$('method').textContent='Фото прочитано · варианты сверены по тексту';}if(response.source)$('method').textContent+=' · '+response.source;const photoMath=response.scan&&!response.scan.multiple&&!multiple&&window.scannerArithmetic?.(response.scan.text);
+ if(response.team)$('method').textContent='Совпало '+response.team.agreed+' из '+response.team.valid+' ответивших · участников '+response.team.rows.length+(response.team.reviewed?' · после обсуждения':'')+(response.team.agreed===1?' · низкая уверенность':'')+(response.source?' · '+response.source:'');
  if(photoMath)$('method').textContent='Фото прочитано · проверено точным расчётом';
- complete(photoMath||(submittedImage||multiple?response.answer:displayAnswer(response.answer,question)),$('method').textContent);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
+ complete(photoMath||(submittedImage||multiple?response.answer:displayAnswer(response.answer,question)),$('method').textContent,response.team);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
  catch(e){
    if(submittedSession!==sessionRevision)return;
    if(reference && (!e.status || [429,502,503,504].includes(e.status))){
