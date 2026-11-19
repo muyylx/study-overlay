@@ -1,8 +1,4 @@
-const roster = [
-  ['GLM FlashX', 'free/glm-5.3-flashx'], ['HY4 Flash', 'free/hy4-flash'],
-  ['GPT Luna', 'free/gpt-6-luna'], ['Claude Opus', 'free/claude-opus-4.6'],
-  ['MiMo Pro', 'free/mimo-v2.6-pro'], ['DeepSeek Pro', 'free/deepseek-v4-pro-0813']
-];
+const roster=[['Gemini','gemini'],['Groq','groq'],['OpenRouter','router'],['APInex · GLM','free/glm-5.3-flashx']];
 
 export async function solveTeam({run,messages,options,several,ordered,image,keyOf}) {
   const choice = options.size > 0 && !ordered;
@@ -32,15 +28,15 @@ export async function solveTeam({run,messages,options,several,ordered,image,keyO
       return {name,ms:Date.now()-start,status:e.status===429?'лимит запросов':e.status?'ошибка API '+(e.upstream||e.status):'время ожидания или сбой сети'};
     }
   }
-  const rows=await Promise.all(roster.map(async model=>{
-    if(image && model[0]==='DeepSeek Pro') return {name:model[0],status:'нужен распознанный текст'};
-    const row=await ballot(model,transcript);
-    if(!image && model[0]==='Claude Opus' && row.status==='ошибка API 402') {
-      const substitute=await ballot(['GLM 5.3','free/glm-5.3'],transcript);
-      return {...substitute,name:'GLM 5.3 (замена Claude, API 402)'};
+  const pending=new Map(roster.filter(([,id])=>!image||id!=='groq').map(entry=>[entry[1],ballot(entry,transcript).then(row=>({row,id:entry[1]}))]));
+  const rows=[];
+  while(pending.size){
+    const {row,id}=await Promise.race(pending.values());pending.delete(id);rows.push(row);
+    if(row.key&&rows.filter(r=>r.key===row.key).length> (rows.length+pending.size)/2){
+      for(const id of pending.keys())rows.push({name:roster.find(e=>e[1]===id)[0],status:'ответ ещё не поступил'});
+      break;
     }
-    return row;
-  }));
+  }
   const groups=new Map();
   for(const row of rows) if(row.key)groups.set(row.key,(groups.get(row.key)||0)+1);
   const ranked=[...groups].sort((a,b)=>b[1]-a[1]);

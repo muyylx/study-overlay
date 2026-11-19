@@ -2,6 +2,7 @@
 'use strict';
 const cfg=window.STUDY_CONFIG||{}, api=String(cfg.apiBase||'').replace(/\/$/,'');
 const $=id=>document.getElementById(id);
+let pageDiagram=false;
 let photoRevision=0,sessionRevision=0;
 let token='',device='',me=null,image='',popup=null,pairNonce='',busy=false,awaitingRead=false;
 const hostParam=new URL(location.href).searchParams.get('host');
@@ -369,7 +370,7 @@ async function send(question,force=false,fromCheckbox=false){
  const submittedSession=sessionRevision;
  if(submittedImage)question+='\nСверь условие, выделенные слова и все варианты по приложенному снимку. При расхождении текста страницы со снимком используй задание на снимке.';
  busy=true;$('scan').disabled=true;$('answer').textContent='Команда читает задание и сверяет варианты…';
- try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,contextScan:true,scanPhoto:!!submittedImage,lesson:contextFor(prompt),topic:topicValue(),question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;if(response.scan){submittedReadout=response.scan.text;$('readText').textContent=response.scan.text;topicFromScan({topic:response.scan.topic||topicValue(),author:response.lesson?.author,subject:response.lesson?.subject},response.scan.text);$('method').textContent='Фото прочитано · варианты сверены по тексту';}if(response.source)$('method').textContent+=' · '+response.source;const photoMath=response.scan&&!response.scan.multiple&&!multiple&&window.scannerArithmetic?.(response.scan.text);
+ try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,contextScan:true,scanPhoto:!!submittedImage&&!pageDiagram,lesson:contextFor(prompt),topic:topicValue(),question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;if(response.scan){submittedReadout=response.scan.text;$('readText').textContent=response.scan.text;topicFromScan({topic:response.scan.topic||topicValue(),author:response.lesson?.author,subject:response.lesson?.subject},response.scan.text);$('method').textContent='Фото прочитано · варианты сверены по тексту';}if(response.source)$('method').textContent+=' · '+response.source;const photoMath=response.scan&&!response.scan.multiple&&!multiple&&window.scannerArithmetic?.(response.scan.text);
  if(response.team)$('method').textContent='Совпало '+response.team.agreed+' из '+response.team.valid+' ответивших · участников '+response.team.rows.length+(response.team.reviewed?' · после обсуждения':'')+(response.team.agreed===1?' · низкая уверенность':'')+(response.source?' · '+response.source:'');
  if(photoMath)$('method').textContent='Фото прочитано · проверено точным расчётом';
  complete(photoMath||(submittedImage||multiple?response.answer:displayAnswer(response.answer,question)),$('method').textContent,response.team);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
@@ -401,7 +402,8 @@ $('scan').addEventListener('click',()=>{
  const reuseRead=finding;
  if(finding)endTopicSearch('');
  if(window.parent===window){msg('Сканирование доступно после запуска закладки поверх учебной страницы.');return;}
- const round=++readRound;awaitingRead=true;$('answer').textContent='Читаем текст страницы…';if(!reuseRead)window.parent.postMessage({type:'STUDY_OVERLAY_READ_PAGE'},parentOrigin||'*');
+ if(pageDiagram)$('removePhoto').click();
+ const round=++readRound;awaitingRead=true;$('answer').textContent='Читаем текст страницы…';if(!reuseRead)window.parent.postMessage({type:'STUDY_OVERLAY_READ_PAGE',includeDiagram:!image},parentOrigin||'*');
  setTimeout(()=>{if(awaitingRead && round===readRound){awaitingRead=false;if(image){send('Разбери задание на прикреплённом изображении.');}else{$('answer').textContent='Не удалось прочитать вопрос со страницы. Попробуй скриншот через скрепку.';}}},4000);
 });
 window.addEventListener('message',event=>{
@@ -413,6 +415,7 @@ window.addEventListener('message',event=>{
    return;
  }
  awaitingRead=false;
+ const diagram=event.data.diagramData;if(!image&&typeof diagram==='string'&&diagram.length<=1450000&&/^data:image\/jpeg;base64,/.test(diagram)){image=diagram;pageDiagram=true;$('photoThumb').src=image;$('imageSection').hidden=false;$('imageName').textContent='Иллюстрация со страницы';}
  const cards=Array.isArray(event.data.cards)?event.data.cards.slice(0,12).filter(c=>c&&typeof c.text==='string'&&c.text.length<=6500&&typeof c.title==='string'): [];
  if(cards.length===1){pickCard(cards[0]);return;}
  if(cards.length>1 && !image){
@@ -451,7 +454,7 @@ async function attachPhoto(file){
  try{
    const compressed=await compressPhoto(file);
    if(revision!==photoRevision)return;
-   image=compressed;$('photoThumb').src=image;$('imageSection').hidden=false;
+   pageDiagram=false;image=compressed;$('photoThumb').src=image;$('imageSection').hidden=false;
    $('sendPhoto').hidden=false;$('imageName').textContent='📎 '+(file.name||'Скриншот').slice(0,30);
    msg('Фото прикреплено');
  }catch(error){if(revision===photoRevision)msg(error.message);}
@@ -466,7 +469,7 @@ window.addEventListener('paste',event=>{
  const file=item?.getAsFile();if(!file)return;
  event.preventDefault();void attachPhoto(file);
 });
-$('removePhoto').addEventListener('click',()=>{photoRevision++;image='';$('photoThumb').removeAttribute('src');$('imageSection').hidden=true;$('sendPhoto').hidden=true;});
+$('removePhoto').addEventListener('click',()=>{photoRevision++;pageDiagram=false;image='';$('photoThumb').removeAttribute('src');$('imageSection').hidden=true;$('sendPhoto').hidden=true;});
 $('sendPhoto').addEventListener('click',()=>send('Прочитай вопрос и варианты на изображении.'));
 if(window.parent===window){
  $('backHome').hidden=false;$('findTopic').hidden=true;$('manualBox').open=true;

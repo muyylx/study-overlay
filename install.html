@@ -12,7 +12,7 @@
 <div class="card"><h2>Как подключить уже существующий аккаунт?</h2><p>Авторизуйся на <a href="./index.html">основном сайте</a>. Открой панель, нажми «Подключить аккаунт», подтверди его во вкладке, вернись к заданию. Повторно вводить код приглашения не нужно.</p><p class="muted">На некоторых сайтах Safari блокирует такие панели или передачу данных. Это браузерное ограничение, а не новый аккаунт.</p></div>
 <a class="outline button" href="https://t.me/admiiiiiiinnns" target="_blank" rel="noopener noreferrer">✉ Помощь с установкой · @admiiiiiiinnns</a>
 <p class="muted tiny">Иллюстрации схематичные; кнопки Safari могут выглядеть иначе в разных версиях iOS.</p>
-</main><script src="./reader.js?v=3600"></script><script>
+</main><script src="./reader.js?v=3700"></script><script>
 function studyOverlayQuick(url,readCards){
 'use strict';
 const ID='study-overlay-3-quick-panel';
@@ -100,6 +100,19 @@ fallback.textContent='Панель не загрузилась. Сделай с�
 const link=document.createElement('a');link.textContent='открой разбор фото';link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.style.color='#b6caff';fallback.append(link);
 const timer=setTimeout(()=>{s.append(fallback);frame.hidden=true;frame.style.display='none';},8000);
 
+function diagram(cards){
+ if(cards.length>1)return '';
+ const nodes=[...document.querySelectorAll('main img,main canvas,article img,article canvas,[role=main] img,[role=main] canvas,.que img,.que canvas')].filter(el=>visible(el)&&!el.closest('header,nav,footer')&&el.getBoundingClientRect().width>=48);
+ if(!nodes.length||nodes.length>8)return '';
+ const grid=document.createElement('canvas');grid.width=800;grid.height=nodes.length*300;
+ const ctx=grid.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,grid.width,grid.height);
+ for(const [i,el] of nodes.entries()){
+ const r=el.getBoundingClientRect(),scale=Math.min(790/r.width,265/r.height);
+ const option=el.closest('label,[role=radio],[role=checkbox],.answer-option');
+ ctx.fillStyle='black';ctx.font='20px sans-serif';ctx.fillText((option?.innerText||'Иллюстрация '+(i+1)).trim().slice(0,60),5,i*300+22);
+ ctx.drawImage(el,5,i*300+28,r.width*scale,r.height*scale);
+ }const data=grid.toDataURL('image/jpeg',0.78);return data.length<=1450000?data:'';
+}
 const onMsg=e=>{if(!h.isConnected){removeEventListener('message',onMsg);return;}if(e.source!==frame.contentWindow||e.origin!==origin||!e.data)return;if(e.data.type==='STUDY_PANEL_READY'){clearTimeout(timer);fallback.remove();frame.style.display='';frame.hidden=false;frame.contentWindow.postMessage({type:'STUDY_OVERLAY_TOPIC',topic:pageTopic()},origin);}if(e.data.type==='STUDY_OVERLAY_READ_PAGE'){let text='',cards=[],issue='';
  try{
    const selection=String(getSelection()?.toString()||'').trim();
@@ -117,12 +130,14 @@ const onMsg=e=>{if(!h.isConnected){removeEventListener('message',onMsg);return;}
      if(cards.length===1)text=cards[0].text;
    }
  }catch{issue='Не удалось прочитать разметку. Выдели вопрос или прикрепи снимок.';}
- frame.contentWindow.postMessage({type:'STUDY_OVERLAY_PAGE_TEXT',text,cards,issue,topic:pageTopic(),...pageLesson()},origin);}else if(e.data.type==='STUDY_OVERLAY_HIDE_PANEL'&&!frame.classList.contains('hidden'))shrink();};
+ let diagramData='';try{if(e.data.includeDiagram)diagramData=diagram(cards);}catch{}
+ if(diagramData&&cards.length===1&&!cards[0].text){cards[0].text=read()||cards[0].title;}
+ frame.contentWindow.postMessage({type:'STUDY_OVERLAY_PAGE_TEXT',text,cards,diagramData,issue,topic:pageTopic(),...pageLesson()},origin);}else if(e.data.type==='STUDY_OVERLAY_HIDE_PANEL'&&!frame.classList.contains('hidden'))shrink();};
 addEventListener('message',onMsg);
 (document.body||document.documentElement).appendChild(h);place();
 }
 
-const site='https://muyylx.github.io/study-overlay/panel.html?v=3600';
+const site='https://muyylx.github.io/study-overlay/panel.html?v=3700';
 const code='javascript:'+encodeURIComponent('('+studyOverlayQuick.toString()+')('+JSON.stringify(site)+','+window.studyReadCards.toString()+');');
 document.getElementById('code').value=code;
 document.getElementById('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(code);document.getElementById('copyStatus').textContent='✅ Код скопирован. Теперь вставь его в адрес закладки.';}catch{const ta=document.getElementById('code');ta.focus();ta.select();document.getElementById('copyStatus').textContent='Выделено: нажми «Копировать» в меню Safari.';}});
