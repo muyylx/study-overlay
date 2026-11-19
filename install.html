@@ -1,6 +1,6 @@
 <!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover"><title>Установка · scanner test by muyylx</title>
 <link rel="stylesheet" href="./styles.css?v=3201"><style>.installwrap{max-width:650px;margin:auto;padding:0 16px 45px}.intro{margin:25px 0 15px}.steps{display:grid;gap:12px}.step{display:grid;grid-template-columns:112px 1fr;gap:15px;align-items:center;background:#1b293c;border:1px solid #354761;border-radius:15px;padding:12px}.step img{width:112px;height:90px;object-fit:cover;border-radius:10px;border:1px solid #445776}.step h3{margin:0 0 7px}.step p{font-size:12px;color:#c0cee2}.installwrap textarea{width:100%;height:88px;font-size:10px;overflow-wrap:anywhere}.installwrap p{margin:10px 0}.installwrap a.button{display:flex}.copy-status{font-size:12px;color:#b9cfed;margin-top:8px}@media(max-width:430px){.step{grid-template-columns:90px 1fr;gap:10px}.step img{width:90px;height:80px}}</style></head><body><main class="installwrap">
-<header class="top"><a class="logo" href="./index.html"><span class="brandicon">◈</span><span><b>scanner test</b><small>by muyylx</small></span></a><span class="online">Инструкция 3.2</span></header>
+<header class="top"><a class="logo" href="./index.html"><span class="brandicon">◈</span><span><b>scanner test</b><small>by muyylx</small></span></a><span class="online">Инструкция 3.4</span></header>
 <div class="intro"><h1>Установка панели Safari</h1><p class="muted">Если закладка scanner test уже есть, скопируй новый код и замени её адрес (шаг 4). Для первой установки создай JavaScript-закладку. Сам браузер не разрешает сайту автоматически вставлять код в закладки.</p></div>
 <div class="warning"><strong>⚠ Важно! Если в задании есть медиа</strong><p>Автоматическое сканирование читает доступный текст, но не может надёжно прочитать изображения, схемы и графики. <b>Сделай скриншот и прикрепи его через 📎 в панели.</b></p></div>
 <div class="card"><h2>1. Скопируй код установки</h2><p class="muted">Нажми кнопку ниже. Код должен начинаться с <code>javascript:</code>.</p><textarea id="code" readonly aria-label="JavaScript-код закладки"></textarea><button class="primary" id="copy" type="button">Скопировать код установки</button><p class="copy-status" id="copyStatus">Если копирование не сработает, выдели код и скопируй вручную.</p></div>
@@ -12,8 +12,8 @@
 <div class="card"><h2>Как подключить уже существующий аккаунт?</h2><p>Авторизуйся на <a href="./index.html">основном сайте</a>. Открой панель, нажми «Подключить аккаунт», подтверди его во вкладке, вернись к заданию. Повторно вводить код приглашения не нужно.</p><p class="muted">На некоторых сайтах Safari блокирует такие панели или передачу данных. Это браузерное ограничение, а не новый аккаунт.</p></div>
 <a class="outline button" href="https://t.me/admiiiiiiinnns" target="_blank" rel="noopener noreferrer">✉ Помощь с установкой · @admiiiiiiinnns</a>
 <p class="muted tiny">Иллюстрации схематичные; кнопки Safari могут выглядеть иначе в разных версиях iOS.</p>
-</main><script>
-function studyOverlayQuick(url){
+</main><script src="./reader.js?v=3400"></script><script>
+function studyOverlayQuick(url,readCards){
 'use strict';
 const ID='study-overlay-3-quick-panel';
 const prev=document.getElementById(ID);
@@ -91,13 +91,24 @@ fallback.textContent='Панель не загрузилась. Сделай с�
 const link=document.createElement('a');link.textContent='открой разбор фото';link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.style.color='#b6caff';fallback.append(link);
 const timer=setTimeout(()=>{s.append(fallback);frame.hidden=true;frame.style.display='none';},8000);
 
-const onMsg=e=>{if(!h.isConnected){removeEventListener('message',onMsg);return;}if(e.source!==frame.contentWindow||e.origin!==origin||!e.data)return;if(e.data.type==='STUDY_PANEL_READY'){clearTimeout(timer);fallback.remove();frame.style.display='';frame.hidden=false;frame.contentWindow.postMessage({type:'STUDY_OVERLAY_TOPIC',topic:pageTopic()},origin);}if(e.data.type==='STUDY_OVERLAY_READ_PAGE'){let text='';try{text=read();}catch{}frame.contentWindow.postMessage({type:'STUDY_OVERLAY_PAGE_TEXT',text,topic:pageTopic()},origin);}else if(e.data.type==='STUDY_OVERLAY_HIDE_PANEL'&&!frame.classList.contains('hidden'))shrink();};
+const onMsg=e=>{if(!h.isConnected){removeEventListener('message',onMsg);return;}if(e.source!==frame.contentWindow||e.origin!==origin||!e.data)return;if(e.data.type==='STUDY_PANEL_READY'){clearTimeout(timer);fallback.remove();frame.style.display='';frame.hidden=false;frame.contentWindow.postMessage({type:'STUDY_OVERLAY_TOPIC',topic:pageTopic()},origin);}if(e.data.type==='STUDY_OVERLAY_READ_PAGE'){let text='',cards=[],issue='';
+ try{
+   const selection=String(getSelection()?.toString()||'').trim();
+   if(selection.length>2)text=selection.slice(0,6500);
+   else {
+     const found=readCards(document,visible);cards=found.cards;
+     if(!found.recognized)text=read();
+     else if(!cards.length)issue='Прокрути страницу до нужного вопроса и нажми «Просканировать экран».';
+     if(cards.length===1)text=cards[0].text;
+   }
+ }catch{issue='Не удалось прочитать разметку. Выдели вопрос или прикрепи снимок.';}
+ frame.contentWindow.postMessage({type:'STUDY_OVERLAY_PAGE_TEXT',text,cards,issue,topic:pageTopic()},origin);}else if(e.data.type==='STUDY_OVERLAY_HIDE_PANEL'&&!frame.classList.contains('hidden'))shrink();};
 addEventListener('message',onMsg);
 (document.body||document.documentElement).appendChild(h);place();
 }
 
-const site='https://muyylx.github.io/study-overlay/panel.html?v=3207';
-const code='javascript:'+encodeURIComponent('('+studyOverlayQuick.toString()+')('+JSON.stringify(site)+');');
+const site='https://muyylx.github.io/study-overlay/panel.html?v=3400';
+const code='javascript:'+encodeURIComponent('('+studyOverlayQuick.toString()+')('+JSON.stringify(site)+','+window.studyReadCards.toString()+');');
 document.getElementById('code').value=code;
 document.getElementById('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(code);document.getElementById('copyStatus').textContent='✅ Код скопирован. Теперь вставь его в адрес закладки.';}catch{const ta=document.getElementById('code');ta.focus();ta.select();document.getElementById('copyStatus').textContent='Выделено: нажми «Копировать» в меню Safari.';}});
 </script></body></html>

@@ -227,14 +227,23 @@ $('copyResult').addEventListener('click',async()=>{
 $('recheck').addEventListener('click',()=>{
  if(!activeResult?.key||busy||awaitingRead)return;
  if(image){msg('Убери прикреплённое фото, чтобы перепроверить текст.');return;}
- send(activeResult.question,true);
+ send(activeResult.question,true,activeResult.fromCheckbox);
 });
-async function send(question,force=false){
+let visibleCards=[];
+function pickCard(card){
+ $('cardPicker').hidden=true;
+ if(card.issue&&!image){resetResult();$('readout').hidden=true;$('answer').textContent=card.issue;return;}
+ send(card.text,false,card.multiple===true);
+}
+$('solveCard').addEventListener('click',()=>{
+ const card=visibleCards[Number($('cardSelect').value)];if(card&&!busy)pickCard(card);
+});
+async function send(question,force=false,fromCheckbox=false){
  if(busy)return;
  const activeKeyBefore=activeResult?.key;
- resetResult();
+ $('cardPicker').hidden=true;resetResult();
  const divider='\nВарианты:\n';
- question=question.replace(/\r\n?/gu,'\n');
+ question=question.replace(/\r\n?/gu,'\n').replace(/^[ \t]*(?:варіанти відповідей|варианты ответов|answer choices)[ \t]*[:：]?[ \t]*$/gimu,'Варианты:');
  // A copied exercise often has labels but no line introducing its choices.
  if(!question.includes(divider)){
    const lines=question.trim().split('\n');
@@ -244,7 +253,7 @@ async function send(question,force=false){
    }
  }
  const pos=question.indexOf(divider);
- let multiple=$('selection')?.value==='multiple';
+ let multiple=fromCheckbox || $('selection')?.value==='multiple';
  if(pos>=0){
    const lines=question.slice(pos+divider.length).split('\n');
    const action=/^(?:обери|оберіть|вибери|виберіть) (?:правильні )?відповіді[.!]?$/iu;
@@ -256,6 +265,10 @@ async function send(question,force=false){
  if(!image && topicValue() && (!question || question.trim()===topicValue() || /^(?:Тема|Назва тесту|Название теста):[^\n]+$/iu.test(question.trim()))){
    $('answer').textContent='Тема: '+topicValue()+'. Для выбора ответа нужен сам вопрос. Выдели его на странице или прикрепи фото.';
    return;
+ }
+ if(!image && /^Вопрос \(проверь текст\):\n/u.test(question)){
+   const stems=question.split(divider)[0].split('\n').slice(1).filter(line=>/[?？]\s*$/u.test(line));
+   if(stems.length>1){$('answer').textContent='Сканер прочитал несколько вопросов. Выдели один вопрос с его вариантами или нажми «Исправить текст».';return;}
  }
  if(!question&&!image){$('answer').textContent='Вопрос не найден. Выдели текст задания или прикрепи скриншот.';msg('Не удалось прочитать вопрос. Прикрепи скриншот через скрепку.');return;}
  const prompt=question.split(/\nВарианты:/u)[0];
@@ -278,7 +291,7 @@ async function send(question,force=false){
  }
  function complete(answer,method){
    if(typeof answer!=='string'||!answer.trim())throw Error('Получен пустой ответ');
-   const item={key,question,answer,method,time:Date.now()};
+   const item={key,question,answer,method,fromCheckbox,time:Date.now()};
    if(key && !/недостат(?:очно|ньо) дан|не удалось подтвердить/iu.test(answer)){
      recentAnswers.delete(key);recentAnswers.set(key,item);
      if(recentAnswers.size>10)recentAnswers.delete(recentAnswers.keys().next().value);
@@ -328,7 +341,7 @@ $('manualForm').addEventListener('submit',event=>{
 });
 $('scan').addEventListener('click',()=>{
  if(busy||awaitingRead)return;
- resetResult();
+ $('cardPicker').hidden=true;visibleCards=[];resetResult();
  const reuseRead=finding;
  if(finding)endTopicSearch('');
  if(window.parent===window){msg('Сканирование доступно после запуска закладки поверх учебной страницы.');return;}
@@ -344,6 +357,17 @@ window.addEventListener('message',event=>{
    return;
  }
  awaitingRead=false;
+ const cards=Array.isArray(event.data.cards)?event.data.cards.slice(0,12).filter(c=>c&&typeof c.text==='string'&&c.text.length<=6500&&typeof c.title==='string'): [];
+ if(cards.length===1){pickCard(cards[0]);return;}
+ if(cards.length>1 && !image){
+   visibleCards=cards;
+   $('cardSelect').replaceChildren(...cards.map((card,i)=>{
+     const option=document.createElement('option');option.value=String(i);option.textContent=(i+1)+'. '+card.title.slice(0,150);return option;
+   }));
+   $('cardPicker').hidden=false;$('readout').hidden=true;
+   $('answer').textContent='Выбери вопрос, для которого нужен ответ.';return;
+ }
+ if(event.data.issue&&!image){$('answer').textContent=String(event.data.issue).slice(0,250);$('readout').hidden=true;return;}
  send(question);
 });
 async function compressPhoto(file){
