@@ -26,7 +26,7 @@ async function ownerRelease(user){
  }catch{if(me?.role==='admin'&&me.id===user.id){badge.textContent='Версию подтвердить не удалось';releaseUser=null;}}
 }
 function view(on){ownerRelease(on?me:null);$('loginState').hidden=on;$('workState').hidden=!on;if(on){$('who').textContent=me.name;$('remaining').textContent=me.remaining===null?'Без личного лимита':`${me.remaining} осталось`;}}
-async function request(path,method='GET',data=null){if(!api.startsWith('https://'))throw Error('Не настроен адрес облачного сервера.');const headers={'content-type':'application/json','authorization':'Bearer '+token,'x-study-device':device};let r;try{r=await fetch(api+path,{signal:AbortSignal.timeout(path==='/ask'?16000:60000),method,headers,body:data===null?undefined:JSON.stringify(data),cache:'no-store'});}catch(e){if(e?.name==='TimeoutError'||e?.name==='AbortError')throw Error('Время ожидания ответа истекло. Попробуй ещё раз.');throw Error('Не удалось соединиться с сервером.');}const res=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(Error(res.error||'Ошибка сервера'),{status:r.status});return res;}
+async function request(path,method='GET',data=null){if(!api.startsWith('https://'))throw Error('Не настроен адрес облачного сервера.');const headers={'content-type':'application/json','authorization':'Bearer '+token,'x-study-device':device};let r;try{r=await fetch(api+path,{signal:AbortSignal.timeout(path==='/ask'?(data?.image?23500:16000):60000),method,headers,body:data===null?undefined:JSON.stringify(data),cache:'no-store'});}catch(e){if(e?.name==='TimeoutError'||e?.name==='AbortError')throw Error('Время ожидания ответа истекло. Попробуй ещё раз.');throw Error('Не удалось соединиться с сервером.');}const res=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(Error(res.error||'Ошибка сервера'),{status:r.status});return res;}
 async function validate(){const res=await request('/me');me=res.user;view(true);return res;}
 function clear(){clearRecent();$('answer').textContent='';$('readText').textContent='';$('manualQuestion').value='';$('removePhoto').click();sessionRevision++;clearLesson();token='';device='';me=null;remove();view(false);}
 function tokenFromStorage(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');if(s&&/^[a-f0-9]{64}$/.test(s.token||'')&&/^[a-f0-9]{64}$/.test(s.device||'')){token=s.token;device=s.device;return true;}}catch{}return false;}
@@ -60,18 +60,21 @@ function setDetectedTopic(value,approximate=false){
  detectedTopic=typeof value==='string'?value.replace(/\s+/gu,' ').trim().slice(0,180):'';
  showTopic();
 }
-function topicFromScan(data,question){
+function topicFromScan(data,question,keepPage=false){
  const prompt=question.split('\nВарианты:')[0];
  const explicit=prompt.match(/^(?:Тема(?: тест[ау])?|Назва тесту|Название теста)\s*[:：]\s*([^\n]{1,180})$/imu)?.[1];
- if(data.topic||explicit){setDetectedTopic(data.topic||explicit);return;}
- const work=prompt.match(/(?:твор[уіае]?|повіст[ію]|оповіданн[ія]|роман[іуае]?|поем[іиаы]|каз(?:ка|ці|ки)|вірш[іуа]?)\s+«([^»\n]{2,100})»/iu);
+ const pageTopic=data.topic||explicit||((keepPage&&!inferred)?detectedTopic:'');
+ const work=prompt.match(/(?:твор[уіае]?|повіст[ію]|оповіданн[ія]|роман[іуае]?|поем[іиаы]|каз(?:ка|ці|ки)|вірш[іуа]?)\s+[«„“"]([^»“”"\n]{2,100})[»“”"]/iu);
  const topics=[
+   [/григор.{0,12}многогріш|гриць.{0,8}сірко|тигролови/iu,'Тигролови'],[/багрян/iu,'Іван Багряний'],
    [/складнопідрядн|підрядн.{0,16}(частин|реченн)/iu,'Складнопідрядне речення'],
    [/розв.{1,4}яж.{0,6} рівняння|решите? уравнение/iu,'Рівняння'],
    [/фотосинтез/iu,'Фотосинтез'],[/географічн.{0,4} координат/iu,'Географічні координати'],
    [/раціональн.{0,4} числ/iu,'Раціональні числа'],[/частин[аи] мов[иі]/iu,'Частини мови']
  ];
  const found=work?'«'+work[1]+'»':topics.find(([pattern])=>pattern.test(prompt))?.[1];
+ if(work){setDetectedTopic(found,true);return;}
+ if(pageTopic){setDetectedTopic(pageTopic);return;}
  setDetectedTopic(found,!!found);
 }
 function endTopicSearch(hint){
@@ -259,7 +262,12 @@ async function send(question,force=false,fromCheckbox=false){
    const action=/^(?:обери|оберіть|вибери|виберіть) (?:правильні )?відповіді[.!]?$/iu;
    multiple ||= lines.some(line=>action.test(line.trim()));
    const kept=lines.filter(line=>!action.test(line.trim())&&!/^(?:далі|діслексія|дислексія|завершити|наступне|назад|submit)$/iu.test(line.trim()));
-   question=question.slice(0,pos)+(kept.length?divider+kept.join('\n'):'');
+   const options=kept.map(row=>row.trim()).filter(Boolean);
+   const labelled=options.map(row=>/^(?:\d+[.)]\s+)?[A-HА-Д][).:]\s*\S/u.test(row));
+   if(options.length>=2 && options.length<=8 && labelled.every(value=>!value)){
+     for(let i=0;i<options.length;i++)options[i]=String.fromCharCode(65+i)+') '+options[i];
+   }
+   question=question.slice(0,pos)+(options.length?divider+options.join('\n'):'');
  }
  $('readout').hidden=false;$('readText').textContent=question||'Только фото';$('method').textContent='';
  if(!image && topicValue() && (!question || question.trim()===topicValue() || /^(?:Тема|Назва тесту|Название теста):[^\n]+$/iu.test(question.trim()))){
@@ -272,6 +280,7 @@ async function send(question,force=false,fromCheckbox=false){
  }
  if(!question&&!image){$('answer').textContent='Вопрос не найден. Выдели текст задания или прикрепи скриншот.';msg('Не удалось прочитать вопрос. Прикрепи скриншот через скрепку.');return;}
  const prompt=question.split(/\nВарианты:/u)[0];
+ if(!image)topicFromScan({},prompt,true);
  const referencesFigure=/(?:на|за|по)\s+(?:схем[іеу]|карт[іеу]|рисунк[уе]|малюнк[уе]|ілюстрації|изображении|фото)/iu.test(prompt);
  const referencesMark=/(?:познач|обознач|цифр|стрілк|стрелк|нумер|номер|літер|букв)/iu.test(prompt);
  if(!image&&referencesFigure&&referencesMark){
@@ -311,12 +320,12 @@ async function send(question,force=false,fromCheckbox=false){
  $('method').textContent=image?'Модель · прикреплено фото':'Модель · текст';
  const reference=!image&&lessonReference(topicValue(),prompt);
  if(reference)$('method').textContent='Модель · сверка с текстом произведения: '+reference.url;
- const readingReview=!image && !multiple && !reference && /літератур|литератур|автор|роман|твор[уіе]|повіст|скрудж|бульб|лісов[аі] пісн|геро[йяї]|поем|повест|гоголь|диккенс|діккенс|письменник/iu.test([topicValue(),$('subject').value,prompt].join(' '));
+ const readingReview=!image && !multiple && /багрян|тигролов|многогріш|літератур|литератур|автор|роман|твор[уіе]|повіст|скрудж|бульб|лісов[аі] пісн|геро[йяї]|поем|повест|гоголь|диккенс|діккенс|письменник/iu.test([topicValue(),$('subject').value,prompt].join(' '));
  const submittedImage=image;
  const submittedSession=sessionRevision;
  if(submittedImage)question+='\nСверь условие, выделенные слова и все варианты по приложенному снимку. При расхождении текста страницы со снимком используй задание на снимке.';
  busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
- try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;complete(submittedImage||multiple?response.answer:displayAnswer(response.answer,question),$('method').textContent);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
+ try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,contextScan:true,scanPhoto:!!submittedImage,topic:topicValue(),question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;if(response.scan){$('readText').textContent=response.scan.text;topicFromScan({topic:response.scan.topic||topicValue()},response.scan.text);$('method').textContent='Фото прочитано · варианты сверены по тексту';}if(response.source)$('method').textContent+=' · '+response.source;complete(submittedImage||multiple?response.answer:displayAnswer(response.answer,question),$('method').textContent);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
  catch(e){
    if(submittedSession!==sessionRevision)return;
    if(reference && (!e.status || [429,502,503,504].includes(e.status))){
