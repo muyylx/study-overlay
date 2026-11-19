@@ -320,9 +320,11 @@ async function send(question,force=false,fromCheckbox=false){
  if(!image)topicFromScan({},prompt,true);
  const referencesFigure=/(?:на|за|по)\s+(?:схем[іеу]|карт[іеу]|рисунк[уе]|малюнк[уе]|ілюстрації|изображении|фото)/iu.test(prompt);
  const referencesMark=/(?:познач|обознач|цифр|стрілк|стрелк|нумер|номер|літер|букв)/iu.test(prompt);
- if(!image&&referencesFigure&&referencesMark){
+ const readsInstrument=/(?:термометр|шкал[аиіу]|граф[іи]к|діаграм|диаграм)/iu.test(prompt)
+   && /(?:зображен|изображ[её]н|показан|на рисунку|на малюнку|на рисунке)/iu.test(prompt);
+ if(!image&&(referencesFigure&&referencesMark||readsInstrument)){
    $('method').textContent='Нужно изображение';
-   $('answer').textContent='Прикрепи карту или схему с обозначениями.';
+   $('answer').textContent='Прикрепи рисунок целиком, чтобы были видны шкала или обозначения.';
    return;
  }
  multiple ||=/оберіть (?:усі|всі|два|три)|выберите (?:все|два|три)|select all|choose (?:two|three)/iu.test(prompt);

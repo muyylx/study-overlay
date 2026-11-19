@@ -64,3 +64,11 @@ test('Автор неизвестного произведения берётс�
  assert.equal(ui.requests[0].lesson.author,'Марко Вовчок');
  assert.equal(ui.requests[0].lesson.topic,'Інститутка');
 });
+test('Десятичный вариант из раздельных подписи и числа, верный знак',async()=>{
+ const ui=panel();
+ assert.equal(await ui.submit('7/2\nВарианты:\nA -3,5\nB 3,5'),'B) 3,5');
+ assert.equal(ui.requests.length,0);
+});
+test('Считывание термометра требует приложенного рисунка',async()=>{
+ const ui=panel();assert.match(await ui.submit('Вкажіть показники термометра, зображеного на рисунку.\nA) +6℃\nB) -6℃'),/Прикрепи рисунок/);assert.equal(ui.requests.length,0);
+});
