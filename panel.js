@@ -51,10 +51,35 @@ async function refresh(){
  try{const res=await request('/me');if(revision===sessionRevision){me=res.user;view(true);}}
  catch(e){if(revision!==sessionRevision)return;if(e.status===401)clear();msg(e.message);}
 }
+// Only the stem and lesson metadata participate. Choices may contain distractor authors.
+function scanLesson(stem,pageTopic='',pageSubject='',pageAuthor=''){
+  const text=String(stem||'').split(/\n(?:Варианты|варіанти відповідей|answer choices):?/iu)[0];
+  const work=text.match(/(?:роман[іуеа]?|повіст[іюь]|твор[іуеа]?|поем[іиаы]|оповіданн[ія]|п'єс[іаи]|novel|poem)\s+[«„“"]([^»”"\n]{2,110})[»”"]/iu)?.[1];
+  const books=[
+    [/тигролови|тигроловы|григор.{0,12}многогріш/iu,'Тигролови','Іван Багряний','Українська література'],
+    [/тарас\s+бульб/iu,'Тарас Бульба','Микола Гоголь','Література'],
+    [/різдвяна пісня|рождественская песнь|a christmas carol/iu,'Різдвяна пісня в прозі','Чарльз Дікенс','Зарубіжна література'],
+    [/вітька\s*(?:\+|і|та)\s*галя|вітьк[аоиуі] гороб/iu,'Вітька + Галя','Валентин Чемерис','Українська література'],
+    [/лісова пісня/iu,'Лісова пісня','Леся Українка','Українська література'],
+    [/захар беркут/iu,'Захар Беркут','Іван Франко','Українська література']
+  ];
+  const book=books.find(([re])=>re.test(work||text))||(!work&&books.find(([re])=>re.test(pageTopic)));
+  const topic=work||pageTopic||book?.[1]||'';
+  const named=text.match(/(?:автор(?:ка)? (?:твору|произведения)|work author)\s*[:：]\s*([^\n.?!;:]{3,85})(?:$|\n)/imu)?.[1];
+  // Accept a bibliographic title only when a named writer is paired with a quoted work.
+  const citation=String(pageTopic).replace(/^(?:тест|тема)\s*:\s*/iu,'').match(/^([А-ЯІЇЄҐA-Z][\p{L}’'-]+(?:\s+[А-ЯІЇЄҐA-Z][\p{L}’'-]+){1,2})\s*[.:—–-]?\s*[«„“"]([^»”"\n]{2,110})[»”"]/u);
+  const paired=citation&&(!work||citation[2].toLowerCase()===work.toLowerCase());
+  const subjects=[[/рівнян|уравнен|алгебр|equation|трикутник|геометр/iu,'Математика'],[/фотосинтез|біолог|біосфер|митоз/iu,'Біологія'],[/підрядн|морфолог|сполучник/iu,'Українська мова'],[/столиц|географ/iu,'Географія'],[/літератур|литератур|роман[уіа]?\s+[«"]/iu,'Література']];
+  const subject=pageSubject||book?.[3]||subjects.find(([re])=>re.test(topic+' '+text))?.[1]||'';
+  return {topic:work||(paired?citation[2]:topic),subject:subject||(paired?'Література':''),author:named?.trim()||book?.[2]||(paired?citation[1]:'')||pageAuthor||''};
+}
+
+let pageSubject="",pageAuthor="",lessonStem="";
+function contextFor(stem){return scanLesson(stem,topicValue(),$("subject").value.trim()||pageSubject,pageAuthor);}
 const lessonFields={grade:'Класс',subject:'Предмет',topic:'Тема'};
 let detectedTopic='', inferred=false, finding=false, searchRound=0;
 function topicValue(){return $('topic').value.trim()||detectedTopic;}
-function showTopic(){ $('topicStatus').textContent='Тема: '+(topicValue()||'не найдено')+(inferred && !$('topic').value.trim()?' (по вопросу)':''); }
+function showTopic(){const meta=contextFor(lessonStem);if($("metadataStatus"))$("metadataStatus").textContent="Предмет: "+(meta.subject||"не найдено")+" · Автор произведения: "+(meta.author||"не найдено"); $('topicStatus').textContent='Тема: '+(topicValue()||'не найдено')+(inferred && !$('topic').value.trim()?' (по вопросу)':''); }
 function setDetectedTopic(value,approximate=false){
  inferred=approximate;
  detectedTopic=typeof value==='string'?value.replace(/\s+/gu,' ').trim().slice(0,180):'';
@@ -62,6 +87,8 @@ function setDetectedTopic(value,approximate=false){
 }
 function topicFromScan(data,question,keepPage=false){
  const prompt=question.split('\nВарианты:')[0];
+ lessonStem=prompt;
+ if(!keepPage){pageSubject=typeof data.subject==='string'?data.subject.slice(0,80):'';pageAuthor=typeof data.author==='string'?data.author.slice(0,85):'';}
  const explicit=prompt.match(/^(?:Тема(?: тест[ау])?|Назва тесту|Название теста)\s*[:：]\s*([^\n]{1,180})$/imu)?.[1];
  const pageTopic=data.topic||explicit||((keepPage&&!inferred)?detectedTopic:'');
  const work=prompt.match(/(?:твор[уіае]?|повіст[ію]|оповіданн[ія]|роман[іуае]?|поем[іиаы]|каз(?:ка|ці|ки)|вірш[іуа]?)\s+[«„“"]([^»“”"\n]{2,100})[»“”"]/iu);
@@ -72,7 +99,8 @@ function topicFromScan(data,question,keepPage=false){
    [/фотосинтез/iu,'Фотосинтез'],[/географічн.{0,4} координат/iu,'Географічні координати'],
    [/раціональн.{0,4} числ/iu,'Раціональні числа'],[/частин[аи] мов[иі]/iu,'Частини мови']
  ];
- const found=work?'«'+work[1]+'»':topics.find(([pattern])=>pattern.test(prompt))?.[1];
+ const knownTopic=scanLesson(prompt,pageTopic).topic;
+ const found=work?'«'+work[1]+'»':knownTopic||topics.find(([pattern])=>pattern.test(prompt))?.[1];
  if(work){setDetectedTopic(found,true);return;}
  if(pageTopic){setDetectedTopic(pageTopic);return;}
  setDetectedTopic(found,!!found);
@@ -93,7 +121,7 @@ window.addEventListener('message',event=>{
  if(!parentOrigin||event.origin!==parentOrigin||event.source!==window.parent||window===window.parent)return;
  if(event.data?.type==='STUDY_OVERLAY_TOPIC')setDetectedTopic(event.data.topic);
 });
-function clearLesson(){if($('passage'))$('passage').value='';if($('selection'))$('selection').value='auto';for(const key of Object.keys(lessonFields))$(key).value='';showTopic();}
+function clearLesson(){lessonStem='';pageAuthor='';pageSubject='';detectedTopic='';inferred=false;if($('passage'))$('passage').value='';if($('selection'))$('selection').value='auto';for(const key of Object.keys(lessonFields))$(key).value='';showTopic();}
 $('clearLesson').addEventListener('click',clearLesson);
 // Editorial summaries are selected by work and question, never by option position.
 function lessonReference(topic,question){
@@ -129,13 +157,14 @@ function lessonReference(topic,question){
 function withLesson(question){
  const notes=Object.entries(lessonFields).map(([key,label])=>[label,key==='topic'?topicValue():$(key).value.trim()]).filter(([,value])=>value);
  const [stem]=question.split('\nВарианты:');
- const context=Object.fromEntries(notes);
+ const meta=contextFor(stem);
+ const context={...Object.fromEntries(notes),Тема:meta.topic||'не найдено',Предмет:meta.subject||'не найдено','Автор произведения':meta.author||'не найдено'};
  const parts=[];
  const reference=lessonReference(context.Тема||'',stem);
  if(reference)parts.push('Джерело до завдання — переказ фрагмента про відповідний епізод: '+reference.fact+' Зістав факт з усіма варіантами, врахуй заперечення.');
  const passage=$('passage')?.value?.trim();
  if(passage)parts.push('Отрывок ученика для сверки фактов: '+JSON.stringify(passage.slice(0,1500)));
- if(notes.length)parts.push('Контекст теста: '+JSON.stringify(context));
+ parts.push('Контекст теста: '+JSON.stringify(context));
  parts.push('Определи, что именно требуется узнать из формулировки задания. Сначала сформулируй краткий ответ по существу, затем сопоставь его с содержанием каждого варианта. Проверь отрицания, ограничения и подпись выбранного варианта. Верни только итог на языке задания.');
  if(/літератур|литератур|письменник|автор|книг|повіст|геро[йяї]|читач|твір|твору|оповідан|роман|поем|жанр/iu.test([context.Предмет,context.Тема,stem].join(' '))){
    parts.push('Для литературного вопроса установи произведение и тип запрошенного факта: жанр, адресат книги, авторский замысел, рассказчик, поступок персонажа или событие. Проверь, отвечает ли вариант на этот вопрос целиком: верный факт о герое может не относиться к читателям. Не выбирай группу читателей только потому, что к ней принадлежит главный герой.');
@@ -289,7 +318,7 @@ async function send(question,force=false,fromCheckbox=false){
    return;
  }
  multiple ||=/оберіть (?:усі|всі|два|три)|выберите (?:все|два|три)|select all|choose (?:two|three)/iu.test(prompt);
- const key=image?'':JSON.stringify([question,topicValue(),$('subject').value,$('grade').value,$('passage').value,multiple]);
+ const key=image?'':JSON.stringify([question,contextFor(prompt),topicValue(),$('subject').value,$('grade').value,$('passage').value,multiple]);
  if(force && activeKeyBefore && activeKeyBefore!==key){
    $('answer').textContent='Контекст изменился. Просканируй вопрос заново с текущими настройками.';
    return;
@@ -298,9 +327,10 @@ async function send(question,force=false,fromCheckbox=false){
  if(!force && previous && Date.now()-previous.time<10*60*1000){
    showResult(previous,'Повторный вопрос · '+previous.method);return;
  }
+ let submittedReadout='';
  function complete(answer,method){
    if(typeof answer!=='string'||!answer.trim())throw Error('Получен пустой ответ');
-   const item={key,question,answer,method,fromCheckbox,time:Date.now()};
+   const item={key,question:submittedReadout||question,answer,method,fromCheckbox,time:Date.now()};
    if(key && !/недостат(?:очно|ньо) дан|не удалось подтвердить/iu.test(answer)){
      recentAnswers.delete(key);recentAnswers.set(key,item);
      if(recentAnswers.size>10)recentAnswers.delete(recentAnswers.keys().next().value);
@@ -325,7 +355,7 @@ async function send(question,force=false,fromCheckbox=false){
  const submittedSession=sessionRevision;
  if(submittedImage)question+='\nСверь условие, выделенные слова и все варианты по приложенному снимку. При расхождении текста страницы со снимком используй задание на снимке.';
  busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
- try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,contextScan:true,scanPhoto:!!submittedImage,topic:topicValue(),question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;if(response.scan){$('readText').textContent=response.scan.text;topicFromScan({topic:response.scan.topic||topicValue()},response.scan.text);$('method').textContent='Фото прочитано · варианты сверены по тексту';}if(response.source)$('method').textContent+=' · '+response.source;complete(submittedImage||multiple?response.answer:displayAnswer(response.answer,question),$('method').textContent);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
+ try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,contextScan:true,scanPhoto:!!submittedImage,lesson:contextFor(prompt),topic:topicValue(),question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;if(response.scan){submittedReadout=response.scan.text;$('readText').textContent=response.scan.text;topicFromScan({topic:response.scan.topic||topicValue(),author:response.lesson?.author,subject:response.lesson?.subject},response.scan.text);$('method').textContent='Фото прочитано · варианты сверены по тексту';}if(response.source)$('method').textContent+=' · '+response.source;complete(submittedImage||multiple?response.answer:displayAnswer(response.answer,question),$('method').textContent);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
  catch(e){
    if(submittedSession!==sessionRevision)return;
    if(reference && (!e.status || [429,502,503,504].includes(e.status))){

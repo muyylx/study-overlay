@@ -45,3 +45,22 @@ test('повтор после сбоя снова обращается в обл
 test('панель решает перевод единиц без запроса',async()=>{
  const ui=panel();assert.equal(await ui.submit('Переведи 36 км/ч в м/с'),'10 м/с');assert.equal(ui.requests.length,0);
 });
+
+test('Автоскан передаёт автора и предмет через обычную отправку без ввода',async()=>{
+ const ui=panel();
+ await ui.submit('Дракона в романі "Тигролови" нагадує:\nA) потяг\nB) Медвин');
+ assert.equal(ui.requests[0].lesson.author,'Іван Багряний');
+ assert.equal(ui.requests[0].lesson.topic,'Тигролови');
+ assert.equal(ui.requests[0].lesson.subject,'Українська література');
+ assert.match(ui.requests[0].question,/Автор произведения.{1,6}Іван Багряний/u);
+ await ui.submit('Столиця Франції?\nA) Іван Багряний\nB) Париж');
+ assert.equal(ui.requests[1].lesson.author,'');
+ assert.equal(ui.requests[1].lesson.subject,'Географія');
+});
+test('Автор неизвестного произведения берётся из заголовка с названием книги',async()=>{
+ const ui=panel();
+ ui.field('topic').value='Марко Вовчок. «Інститутка»';
+ await ui.submit('Який жанр твору?\nA) повість\nB) роман');
+ assert.equal(ui.requests[0].lesson.author,'Марко Вовчок');
+ assert.equal(ui.requests[0].lesson.topic,'Інститутка');
+});

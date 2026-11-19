@@ -12,7 +12,7 @@
 <div class="card"><h2>Как подключить уже существующий аккаунт?</h2><p>Авторизуйся на <a href="./index.html">основном сайте</a>. Открой панель, нажми «Подключить аккаунт», подтверди его во вкладке, вернись к заданию. Повторно вводить код приглашения не нужно.</p><p class="muted">На некоторых сайтах Safari блокирует такие панели или передачу данных. Это браузерное ограничение, а не новый аккаунт.</p></div>
 <a class="outline button" href="https://t.me/admiiiiiiinnns" target="_blank" rel="noopener noreferrer">✉ Помощь с установкой · @admiiiiiiinnns</a>
 <p class="muted tiny">Иллюстрации схематичные; кнопки Safari могут выглядеть иначе в разных версиях iOS.</p>
-</main><script src="./reader.js?v=3500"></script><script>
+</main><script src="./reader.js?v=3501"></script><script>
 function studyOverlayQuick(url,readCards){
 'use strict';
 const ID='study-overlay-3-quick-panel';
@@ -72,6 +72,15 @@ function readTopic(){
   }
   return '';
 }
+function pageLesson(){
+  const meta={subject:'',author:''};
+  for(const [key,selector] of [['subject','[data-quiz-subject],[data-test-subject],meta[itemprop="educationalSubject"]'],['author','[data-work-author],[itemprop="workExample"] [itemprop="author"]']]){
+    const el=document.querySelector(selector);
+    if(el)meta[key]=String(el.dataset?.quizSubject||el.dataset?.testSubject||el.dataset?.workAuthor||el.content||el.textContent||'').trim().slice(0,85);
+  }
+  if(!meta.subject){const title=document.title||'';meta.subject=title.match(/(?:тест (?:з|із|по) )([^–—|]{3,65})/iu)?.[1]?.trim()||'';}
+  return meta;
+}
 function pageTopic(){try{return readTopic();}catch{return '';}}
 function read(){const selected=String(getSelection()?.toString()||'').trim();if(selected.length>2)return selected.slice(0,6500);const seen=new Set(),qs=[],as=[],groups=new Set();
 for(const el of document.querySelectorAll('[data-testid*="question"],[class*="question-title"],[class*="questionTitle"],[class*="question-text"],[id*="question"],h1,h2,legend')){if(qs.length>=3)break;if(!visible(el)||el.closest('nav,header,footer,aside'))continue;if(el.querySelector('math,.katex,mjx-container,sup,sub,img,svg,canvas'))return '';const t=String(el.innerText||el.textContent||'').replace(/\s+/g,' ').trim();if(el.matches('h1,h2')&&!el.closest('[class*="question"],[id*="question"],[data-testid*="question"]')&&!/^\s*[-+(\d][\d\s(),.+/−–—-]*[+−–—-]\s*[-(\d][\d\s(),.+/−–—-]*$/.test(t)&&!/[?？=]|підрядн|сполучн|виділене слово|обчисл|вибер|визнач|укаж|вкаж|оберіть|обери|познач|установ|встанов|розташ|зістав|зазнач|назвіть|определи|укажи|укажите|сопостав|перечисл|сколько|найди|выбер|назови|calculate|which|choose/i.test(t))continue;if(t.length<3||t.length>1000||seen.has(t))continue;seen.add(t);qs.push(t);const group=el.closest("fieldset");if(group)groups.add(group);}
@@ -102,12 +111,12 @@ const onMsg=e=>{if(!h.isConnected){removeEventListener('message',onMsg);return;}
      if(cards.length===1)text=cards[0].text;
    }
  }catch{issue='Не удалось прочитать разметку. Выдели вопрос или прикрепи снимок.';}
- frame.contentWindow.postMessage({type:'STUDY_OVERLAY_PAGE_TEXT',text,cards,issue,topic:pageTopic()},origin);}else if(e.data.type==='STUDY_OVERLAY_HIDE_PANEL'&&!frame.classList.contains('hidden'))shrink();};
+ frame.contentWindow.postMessage({type:'STUDY_OVERLAY_PAGE_TEXT',text,cards,issue,topic:pageTopic(),...pageLesson()},origin);}else if(e.data.type==='STUDY_OVERLAY_HIDE_PANEL'&&!frame.classList.contains('hidden'))shrink();};
 addEventListener('message',onMsg);
 (document.body||document.documentElement).appendChild(h);place();
 }
 
-const site='https://muyylx.github.io/study-overlay/panel.html?v=3500';
+const site='https://muyylx.github.io/study-overlay/panel.html?v=3501';
 const code='javascript:'+encodeURIComponent('('+studyOverlayQuick.toString()+')('+JSON.stringify(site)+','+window.studyReadCards.toString()+');');
 document.getElementById('code').value=code;
 document.getElementById('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(code);document.getElementById('copyStatus').textContent='✅ Код скопирован. Теперь вставь его в адрес закладки.';}catch{const ta=document.getElementById('code');ta.focus();ta.select();document.getElementById('copyStatus').textContent='Выделено: нажми «Копировать» в меню Safari.';}});
