@@ -126,6 +126,34 @@
     } catch { return null; }
   }
 
+  function numericChoice(text) {
+    const clean=text.trim().replace(/[−–—﹣－]/gu,'-').replace(/⁄/gu,'/');
+    const mixed=clean.match(/^([+-]?)(\d+)\s+(\d+)\s*\/\s*(\d+)$/u);
+    if(mixed){
+      const [,sign,whole,part,base]=mixed;
+      if(!BigInt(base)||BigInt(part)>=BigInt(base))return null;
+      return [(sign==='-'?-1n:1n)*(BigInt(whole)*BigInt(base)+BigInt(part)),BigInt(base)];
+    }
+    const percent=clean.endsWith('%');
+    const value=calculate(percent?clean.slice(0,-1):clean);
+    return percent&&value?[value[0],value[1]*100n]:value;
+  }
+
+  // Long division keeps decimal commas exact, even beyond Number.MAX_SAFE_INTEGER.
+  function formatNumber(n,d){
+    let magnitude=n<0n?-n:n, divisor=d;
+    while(divisor){const rest=magnitude%divisor;magnitude=divisor;divisor=rest;}
+    n/=magnitude;d/=magnitude;
+    if(d===1n)return String(n);
+    const sign=n<0n?'-':'',abs=n<0n?-n:n;
+    let remainder=abs%d,digits='';
+    while(remainder && digits.length<16){
+      remainder*=10n;digits+=String(remainder/d);remainder%=d;
+    }
+    const decimal=sign+String(abs/d)+','+digits;
+    return remainder?String(n)+'/'+String(d)+' (≈ '+decimal.slice(0,decimal.indexOf(',')+7)+'…)':decimal+' (= '+String(n)+'/'+String(d)+')';
+  }
+
   function solve(text) {
     const [question, choices] = text.replace(/^Вопрос \(проверь текст\):\s*/u,'').split(/\nВарианты:\s*\n/u);
     // Parse the whole prompt. Extracting an arbitrary substring can turn a score or an option into the exercise.
@@ -167,6 +195,7 @@
     }
     if (!result) return null;
     const [n,d] = result;
+    const formatted=formatNumber(n,d);
     if (choices) {
       const matches = [];
       for (const line of choices.trim().split('\n')) {
@@ -174,15 +203,15 @@
         const choice = line.trim().replace(/^\d+\.\s+(?=[A-DА-ГІЇЄҐ][).:\s])/iu,'');
         const parts = choice.match(/^(?:([A-HА-ДЄІЇҐ])(?:\s*[).:]\s*|\s+))?(.+)$/iu);
         if (!parts) continue;
-        const value = calculate(parts[2]);
+        const value = numericChoice(parts[2]);
         if (!value) continue;
         if (value[0]*d === n*value[1]) matches.push(parts[1] ? parts[1]+') '+parts[2] : parts[2]);
       }
       if (matches.length === 1) return matches[0];
+      if (matches.length > 1) return formatted+' · Равны несколько вариантов: '+matches.join(' и ');
+      return formatted+' · Среди прочитанных вариантов совпадения нет.';
     }
-    let a = n < 0n ? -n : n, b = d;
-    while (b) [a,b] = [b,a%b];
-    return d/a === 1n ? String(n/a) : String(n/a)+'/'+String(d/a);
+    return formatted;
   }
   window.scannerArithmetic = solve;
 })();

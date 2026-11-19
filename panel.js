@@ -69,7 +69,7 @@ function scanLesson(stem,pageTopic='',pageSubject='',pageAuthor=''){
   // Accept a bibliographic title only when a named writer is paired with a quoted work.
   const citation=String(pageTopic).replace(/^(?:тест|тема)\s*:\s*/iu,'').match(/^([А-ЯІЇЄҐA-Z][\p{L}’'-]+(?:\s+[А-ЯІЇЄҐA-Z][\p{L}’'-]+){1,2})\s*[.:—–-]?\s*[«„“"]([^»”"\n]{2,110})[»”"]/u);
   const paired=citation&&(!work||citation[2].toLowerCase()===work.toLowerCase());
-  const subjects=[[/рівнян|уравнен|алгебр|equation|трикутник|геометр/iu,'Математика'],[/фотосинтез|біолог|біосфер|митоз/iu,'Біологія'],[/підрядн|морфолог|сполучник/iu,'Українська мова'],[/столиц|географ/iu,'Географія'],[/літератур|литератур|роман[уіа]?\s+[«"]/iu,'Література']];
+  const subjects=[[/раціональн.{0,5} числ|рациональн.{0,5} числ|додаванн|відніманн|дроб[иіья]|рівнян|уравнен|алгебр|equation|трикутник|геометр/iu,'Математика'],[/фотосинтез|біолог|біосфер|митоз/iu,'Біологія'],[/підрядн|морфолог|сполучник/iu,'Українська мова'],[/столиц|географ/iu,'Географія'],[/літератур|литератур|роман[уіа]?\s+[«"]/iu,'Література']];
   const subject=pageSubject||book?.[3]||subjects.find(([re])=>re.test(topic+' '+text))?.[1]||'';
   return {topic:work||(paired?citation[2]:topic),subject:subject||(paired?'Література':''),author:named?.trim()||book?.[2]||(paired?citation[1]:'')||pageAuthor||''};
 }
@@ -292,6 +292,10 @@ async function send(question,force=false,fromCheckbox=false){
    multiple ||= lines.some(line=>action.test(line.trim()));
    const kept=lines.filter(line=>!action.test(line.trim())&&!/^(?:далі|діслексія|дислексія|завершити|наступне|назад|submit)$/iu.test(line.trim()));
    const options=kept.map(row=>row.trim()).filter(Boolean);
+   // Sites often render the letter and a numeric value as separate spans.
+   for(let i=0;i<options.length;i++){
+     options[i]=options[i].replace(/^([A-HА-Д])\s+(?=[+−–—-]?\s*\d)/u,'$1) ');
+   }
    const labelled=options.map(row=>/^(?:\d+[.)]\s+)?[A-HА-Д][).:]\s*\S/u.test(row));
    if(options.length>=2 && options.length<=8 && labelled.every(value=>!value)){
      for(let i=0;i<options.length;i++)options[i]=String.fromCharCode(65+i)+') '+options[i];
@@ -355,7 +359,9 @@ async function send(question,force=false,fromCheckbox=false){
  const submittedSession=sessionRevision;
  if(submittedImage)question+='\nСверь условие, выделенные слова и все варианты по приложенному снимку. При расхождении текста страницы со снимком используй задание на снимке.';
  busy=true;$('scan').disabled=true;$('answer').textContent='Обрабатываем вопрос в облаке…';
- try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,contextScan:true,scanPhoto:!!submittedImage,lesson:contextFor(prompt),topic:topicValue(),question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;if(response.scan){submittedReadout=response.scan.text;$('readText').textContent=response.scan.text;topicFromScan({topic:response.scan.topic||topicValue(),author:response.lesson?.author,subject:response.lesson?.subject},response.scan.text);$('method').textContent='Фото прочитано · варианты сверены по тексту';}if(response.source)$('method').textContent+=' · '+response.source;complete(submittedImage||multiple?response.answer:displayAnswer(response.answer,question),$('method').textContent);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
+ try{const response=await request('/ask','POST',{selection:multiple?'multiple':'auto',readingReview,contextScan:true,scanPhoto:!!submittedImage,lesson:contextFor(prompt),topic:topicValue(),question:withLesson(question||'Прочитай вопрос и варианты на изображении.'),image:submittedImage||undefined});if(submittedSession!==sessionRevision)return;if(response.scan){submittedReadout=response.scan.text;$('readText').textContent=response.scan.text;topicFromScan({topic:response.scan.topic||topicValue(),author:response.lesson?.author,subject:response.lesson?.subject},response.scan.text);$('method').textContent='Фото прочитано · варианты сверены по тексту';}if(response.source)$('method').textContent+=' · '+response.source;const photoMath=response.scan&&!response.scan.multiple&&!multiple&&window.scannerArithmetic?.(response.scan.text);
+ if(photoMath)$('method').textContent='Фото прочитано · проверено точным расчётом';
+ complete(photoMath||(submittedImage||multiple?response.answer:displayAnswer(response.answer,question)),$('method').textContent);if(submittedImage&&image===submittedImage)$('removePhoto').click();void refresh();}
  catch(e){
    if(submittedSession!==sessionRevision)return;
    if(reference && (!e.status || [429,502,503,504].includes(e.status))){
