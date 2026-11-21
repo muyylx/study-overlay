@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<title>Scanner Cloud · обновление личной закладки</title>
+<style>
+*{box-sizing:border-box}
+body{font:16px -apple-system,BlinkMacSystemFont,Arial,sans-serif;background:#111725;color:#eef2ff;max-width:650px;margin:0 auto;padding:24px 17px;line-height:1.52}
+h1{font-size:25px;margin:16px 0}h2{font-size:18px}p,li{color:#c0c9dc}ol{padding-left:25px}
+.card{background:#1c263a;border:1px solid #48577a;border-radius:15px;padding:18px;margin:18px 0}
+textarea{display:block;width:100%;resize:vertical;min-height:110px;padding:13px;border:1px solid #67769f;border-radius:10px;background:#101729;color:#e7edff;font:13px ui-monospace,monospace;overflow-wrap:anywhere}
+button{border:0;background:#6174e5;color:white;font-weight:750;font-size:16px;padding:13px 18px;border-radius:12px;cursor:pointer;margin-top:12px}
+button:disabled{opacity:.55}a{color:#afbfff}
+#status{min-height:26px;white-space:pre-line;font-size:14px;color:#c5d0ee;margin-top:12px}
+#output{display:none}#manual{display:none}.muted{font-size:13px;color:#9db1cf}.alert{color:#ffdcaa}
+</style>
+</head>
+<body>
+<h1>Обновление Scanner Cloud</h1>
+<p>Для личной панели <strong>Scanner Cloud 3.100</strong>. Это не установка Scanner Access для участников, поэтому новый код не попросит код активации.</p>
+<div class="card">
+<h2>Как обновить закладку в Safari</h2>
+<ol>
+<li>Открой «Закладки» и найди работающую закладку Scanner Cloud.</li>
+<li>Нажми «Изменить» и скопируй <strong>весь адрес</strong>, начинающийся с <code>javascript:</code>.</li>
+<li>Вставь его в поле ниже. Страница перенесёт частный токен в новую версию <strong>только на твоём устройстве</strong>.</li>
+<li>Нажми «Подготовить код», затем «Копировать». Замени адрес той же закладки на получившийся код.</li>
+</ol>
+<p class="muted">Токен не отправляется на сервер и не сохраняется в аккаунт. Запрос к GitHub Pages получает только публичный шаблон нового сканера. Не отправляй никому старый или новый код с частным токеном.</p>
+<label for="previous">Старый код закладки Scanner Cloud</label>
+<textarea id="previous" placeholder="javascript:..." spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+<button id="build" type="button">Подготовить код 3.101</button>
+<div id="status" role="status" aria-live="polite"></div>
+</div>
+<div id="output" class="card">
+<h2>Код Scanner Cloud 3.101 готов</h2>
+<p>В новой версии появится проверка обновлений и кнопка «Код новой версии» при выходе следующего релиза.</p>
+<button id="copy" type="button">Копировать новый код</button>
+<div id="manual">
+<p class="alert">Safari ограничил автоматическое копирование. Выдели весь код в поле ниже и выбери «Копировать».</p>
+<textarea id="newcode" readonly spellcheck="false"></textarea>
+<button id="select" type="button">Выделить весь код</button>
+</div>
+<p class="muted">Сохрани новый адрес в закладке. Личный токен включён в код, поэтому никому его не пересылай.</p>
+</div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+let generated='';
+const status=message=>{$('status').textContent=message;};
+function decodedOld(raw){
+ const input=raw.trim();
+ if(!/^javascript:/i.test(input))throw Error('Нужен полный адрес закладки, который начинается с javascript:');
+ const payload=input.slice(input.indexOf(':')+1);
+ try{return decodeURIComponent(payload)}catch(_){return payload;}
+}
+function findToken(source){
+ if(!source.includes('scanner-cloud-3-100')||!source.includes('study-overlay-3-api.study-overlay-muyylx.workers.dev'))throw Error('Это не закладка Scanner Cloud 3.100. Код участников Scanner Access сюда не подходит.');
+ const m=source.match(/const\s+TOKEN\s*=\s*'([^'\r\n]{12,250})'/);
+ if(!m||!(/^[A-Za-z0-9_.~+/=-]{12,250}$/.test(m[1]))||m[1]==='__SCANNER_PRIVATE_TOKEN__')throw Error('Не удалось извлечь частный токен. Проверь, что вставлен именно рабочий код твоей старой закладки.');
+ return m[1];
+}
+$('build').addEventListener('click',async()=>{
+ generated='';$('output').style.display='none';$('manual').style.display='none';$('previous').disabled=true;$('build').disabled=true;
+ status('Проверяю прежнюю закладку…');
+ try{
+  const old=$('previous').value;
+  if(old.length>120000)throw Error('Код слишком длинный.');
+  const token=findToken(decodedOld(old));
+  const response=await fetch('./client-v3.101.js',{cache:'no-store'});
+  if(!response.ok)throw Error('Не удалось скачать публичный шаблон 3.101. HTTP '+response.status);
+  const template=await response.text();
+  const marker="const TOKEN='__SCANNER_PRIVATE_TOKEN__';";
+  if(template.length<15000||template.length>60000||!template.startsWith('(function(){')||!template.includes("const VERSION='3.101';")||template.split(marker).length!==2)throw Error('Неправильный формат шаблона обновления.');
+  const source=template.replace(marker,"const TOKEN='"+token+"';");
+  generated='javascript:'+encodeURIComponent(source);
+  $('previous').value='';
+  $('output').style.display='block';status('Код подготовлен. Он не отправлялся на сервер.');
+ }catch(e){status(e?.message||'Ошибка подготовки кода');}
+ finally{$('previous').disabled=false;$('build').disabled=false;}
+});
+function showManual(){
+ const box=$('manual');box.style.display='block';
+ const field=$('newcode');field.value=generated;field.focus();field.select();field.setSelectionRange(0,field.value.length);
+}
+$('select').addEventListener('click',showManual);
+$('copy').addEventListener('click',async()=>{
+ if(!generated){status('Сначала подготовь код.');return;}
+ try{
+  if(!navigator.clipboard?.writeText)throw Error('clipboard');
+  await navigator.clipboard.writeText(generated);
+  status('Скопировано! Замени адрес старой закладки Safari.');
+ }catch(_){showManual();status('Нажми на выделенный код и выбери «Копировать» в меню Safari.');}
+});
+</script>
+</body>
+</html>
