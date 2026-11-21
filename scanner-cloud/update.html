@@ -5,95 +5,102 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'">
-<title>Scanner Cloud · обновление личной закладки</title>
+<title>Scanner Cloud 3.101 · для владельца</title>
 <style>
 *{box-sizing:border-box}
-body{font:16px -apple-system,BlinkMacSystemFont,Arial,sans-serif;background:#111725;color:#eef2ff;max-width:650px;margin:0 auto;padding:24px 17px;line-height:1.52}
-h1{font-size:25px;margin:16px 0}h2{font-size:18px}p,li{color:#c0c9dc}ol{padding-left:25px}
-.card{background:#1c263a;border:1px solid #48577a;border-radius:15px;padding:18px;margin:18px 0}
-textarea{display:block;width:100%;resize:vertical;min-height:110px;padding:13px;border:1px solid #67769f;border-radius:10px;background:#101729;color:#e7edff;font:13px ui-monospace,monospace;overflow-wrap:anywhere}
-button{border:0;background:#6174e5;color:white;font-weight:750;font-size:16px;padding:13px 18px;border-radius:12px;cursor:pointer;margin-top:12px}
-button:disabled{opacity:.55}a{color:#afbfff}
-#status{min-height:26px;white-space:pre-line;font-size:14px;color:#c5d0ee;margin-top:12px}
-#output{display:none}#manual{display:none}.muted{font-size:13px;color:#9db1cf}.alert{color:#ffdcaa}
+html{color-scheme:dark}
+body{margin:0;min-height:100vh;background:#101524;color:#eef1ff;font:16px -apple-system,BlinkMacSystemFont,Arial,sans-serif;line-height:1.5;padding:24px 18px}
+main{max-width:500px;margin:36px auto 0}
+small{font-size:12px;color:#a6b4d7}
+h1{font-size:28px;margin:8px 0 8px;letter-spacing:-.4px}
+p{color:#b6c1da;margin:10px 0}
+.card{border:1px solid #414d6c;background:#1a2235;border-radius:18px;padding:20px;margin-top:21px}
+h2{font-size:18px;margin:0 0 10px}
+.steps{padding-left:21px;margin:14px 0 20px;color:#e0e7fa}
+.steps li{padding-left:3px;margin-bottom:10px}
+button{border:0;border-radius:13px;background:#6075e7;color:#fff;font:700 16px -apple-system,BlinkMacSystemFont,Arial,sans-serif;padding:15px 16px;width:100%;min-height:52px;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+button.secondary{background:#303a58}
+#result{display:none;margin-top:15px}
+#status{min-height:25px;font-size:14px;white-space:pre-wrap;color:#b9c5eb;margin:13px 0 0}
+#status.error{color:#ffcad1}
+.note{margin-top:18px;font-size:12px;color:#98a9cb}
+a{color:#c1ceff}
 </style>
 </head>
 <body>
-<h1>Обновление Scanner Cloud</h1>
-<p>Для личной панели <strong>Scanner Cloud 3.100</strong>. Это не установка Scanner Access для участников, поэтому новый код не попросит код активации.</p>
-<div class="card">
-<h2>Как обновить закладку в Safari</h2>
-<ol>
-<li>Открой «Закладки» и найди работающую закладку Scanner Cloud.</li>
-<li>Нажми «Изменить» и скопируй <strong>весь адрес</strong>, начинающийся с <code>javascript:</code>.</li>
-<li>Вставь его в поле ниже. Страница перенесёт частный токен в новую версию <strong>только на твоём устройстве</strong>.</li>
-<li>Нажми «Подготовить код», затем «Копировать». Замени адрес той же закладки на получившийся код.</li>
+<main>
+<small>ЛИЧНАЯ ПАНЕЛЬ · БЕЗ АКТИВАЦИИ</small>
+<h1>Scanner Cloud 3.101</h1>
+<p>Обновление твоего сканера. Без регистрации, нового аккаунта и ввода кода активации.</p>
+<section class="card">
+<h2>Получить новый код</h2>
+<ol class="steps">
+<li>В Safari открой закладки, найди <strong>Scanner Cloud 3.100</strong> и нажми «Изменить».</li>
+<li>Скопируй адрес закладки, начинающийся с <code>javascript:</code>.</li>
+<li>Вернись сюда и нажми кнопку ниже. При запросе Safari разреши вставку из буфера.</li>
 </ol>
-<p class="muted">Токен не отправляется на сервер и не сохраняется в аккаунт. Запрос к GitHub Pages получает только публичный шаблон нового сканера. Не отправляй никому старый или новый код с частным токеном.</p>
-<label for="previous">Старый код закладки Scanner Cloud</label>
-<textarea id="previous" placeholder="javascript:..." spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
-<button id="build" type="button">Подготовить код 3.101</button>
+<button id="prepare" type="button">Получить код 3.101</button>
 <div id="status" role="status" aria-live="polite"></div>
+<div id="result">
+<button id="copy" class="secondary" type="button">Копировать готовый код</button>
+<p>Теперь замени адрес своей закладки этим кодом. Старую закладку можно сохранить как резервную.</p>
 </div>
-<div id="output" class="card">
-<h2>Код Scanner Cloud 3.101 готов</h2>
-<p>В новой версии появится проверка обновлений и кнопка «Код новой версии» при выходе следующего релиза.</p>
-<button id="copy" type="button">Копировать новый код</button>
-<div id="manual">
-<p class="alert">Safari ограничил автоматическое копирование. Выдели весь код в поле ниже и выбери «Копировать».</p>
-<textarea id="newcode" readonly spellcheck="false"></textarea>
-<button id="select" type="button">Выделить весь код</button>
-</div>
-<p class="muted">Сохрани новый адрес в закладке. Личный токен включён в код, поэтому никому его не пересылай.</p>
-</div>
+</section>
+<p class="note">Сайт читает скопированный код только после нажатия кнопки. Личный токен вставляется в новый код прямо на устройстве и никуда не отправляется. GitHub отдаёт лишь публичный шаблон. Код с токеном никому не пересылай.</p>
+</main>
 <script>
 'use strict';
-const $=id=>document.getElementById(id);
+const byId=id=>document.getElementById(id);
+const status=message=>{byId('status').textContent=message;byId('status').classList.remove('error')};
+const error=message=>{byId('status').textContent=message;byId('status').classList.add('error')};
 let generated='';
-const status=message=>{$('status').textContent=message;};
-function decodedOld(raw){
- const input=raw.trim();
- if(!/^javascript:/i.test(input))throw Error('Нужен полный адрес закладки, который начинается с javascript:');
- const payload=input.slice(input.indexOf(':')+1);
- try{return decodeURIComponent(payload)}catch(_){return payload;}
+function decodeBookmarklet(raw){
+ const text=String(raw||'').trim();
+ if(!/^javascript\s*:/i.test(text))throw Error('Скопируй весь адрес закладки Scanner Cloud, начиная с javascript:.');
+ const source=text.slice(text.indexOf(':')+1);
+ try{return decodeURIComponent(source)}catch(_){return source}
 }
-function findToken(source){
- if(!source.includes('scanner-cloud-3-100')||!source.includes('study-overlay-3-api.study-overlay-muyylx.workers.dev'))throw Error('Это не закладка Scanner Cloud 3.100. Код участников Scanner Access сюда не подходит.');
- const m=source.match(/const\s+TOKEN\s*=\s*'([^'\r\n]{12,250})'/);
- if(!m||!(/^[A-Za-z0-9_.~+/=-]{12,250}$/.test(m[1]))||m[1]==='__SCANNER_PRIVATE_TOKEN__')throw Error('Не удалось извлечь частный токен. Проверь, что вставлен именно рабочий код твоей старой закладки.');
- return m[1];
+function extractToken(source){
+ if(!source.includes('scanner-cloud-3-100')||!source.includes('study-overlay-3-api.study-overlay-muyylx.workers.dev'))throw Error('В буфере код другого сканера. Скопируй именно старую закладку Scanner Cloud с надписью v3.100, не Scanner Access.');
+ const found=source.match(/const\s+TOKEN\s*=\s*'([^'\r\n]{12,250})'/);
+ const token=found?.[1]||'';
+ if(token==='__SCANNER_PRIVATE_TOKEN__'||!/^[A-Za-z0-9_.~+/=-]{12,250}$/.test(token))throw Error('В этой закладке нет действующего личного токена. Скопируй адрес рабочей закладки Scanner Cloud 3.100.');
+ return token;
 }
-$('build').addEventListener('click',async()=>{
- generated='';$('output').style.display='none';$('manual').style.display='none';$('previous').disabled=true;$('build').disabled=true;
- status('Проверяю прежнюю закладку…');
+function createBookmarklet(template,token){
+ const marker="const TOKEN='__SCANNER_PRIVATE_TOKEN__';";
+ if(template.length<15000||template.length>60000||!template.startsWith('(function(){')||!template.includes("const VERSION='3.101';")||template.split(marker).length!==2)throw Error('Получен неподходящий шаблон сканера. Код не меняй.');
+ return 'javascript:'+encodeURIComponent(template.replace(marker,"const TOKEN='"+token+"';"));
+}
+byId('prepare').addEventListener('click',async()=>{
+ generated='';
+ byId('result').style.display='none';
+ byId('prepare').disabled=true;
+ status('Проверяю буфер обмена…');
  try{
-  const old=$('previous').value;
-  if(old.length>120000)throw Error('Код слишком длинный.');
-  const token=findToken(decodedOld(old));
-  const response=await fetch('./client-v3.101.js',{cache:'no-store'});
-  if(!response.ok)throw Error('Не удалось скачать публичный шаблон 3.101. HTTP '+response.status);
-  const template=await response.text();
-  const marker="const TOKEN='__SCANNER_PRIVATE_TOKEN__';";
-  if(template.length<15000||template.length>60000||!template.startsWith('(function(){')||!template.includes("const VERSION='3.101';")||template.split(marker).length!==2)throw Error('Неправильный формат шаблона обновления.');
-  const source=template.replace(marker,"const TOKEN='"+token+"';");
-  generated='javascript:'+encodeURIComponent(source);
-  $('previous').value='';
-  $('output').style.display='block';status('Код подготовлен. Он не отправлялся на сервер.');
- }catch(e){status(e?.message||'Ошибка подготовки кода');}
- finally{$('previous').disabled=false;$('build').disabled=false;}
+  if(!navigator.clipboard?.readText)throw Error('Safari не поддерживает чтение буфера на этой странице. Открой ссылку в обычном Safari, скопируй адрес закладки и попробуй снова.');
+  const raw=await navigator.clipboard.readText();
+  if(raw.length>120000)throw Error('Скопированный код слишком длинный.');
+  const token=extractToken(decodeBookmarklet(raw));
+  status('Подготавливаю новую закладку…');
+  const res=await fetch('./client-v3.101.js',{cache:'no-store'});
+  if(!res.ok)throw Error('Не удалось получить шаблон 3.101: HTTP '+res.status);
+  const template=await res.text();
+  generated=createBookmarklet(template,token);
+  byId('result').style.display='block';
+  status('Код готов. Нажми «Копировать готовый код».');
+ }catch(e){
+  error(e?.name==='NotAllowedError'?'Safari не разрешил вставку. Скопируй адрес старой закладки ещё раз, вернись сюда и разреши вставку по запросу браузера.':e?.message||'Не удалось подготовить код.');
+ }finally{byId('prepare').disabled=false}
 });
-function showManual(){
- const box=$('manual');box.style.display='block';
- const field=$('newcode');field.value=generated;field.focus();field.select();field.setSelectionRange(0,field.value.length);
-}
-$('select').addEventListener('click',showManual);
-$('copy').addEventListener('click',async()=>{
- if(!generated){status('Сначала подготовь код.');return;}
+byId('copy').addEventListener('click',async()=>{
+ if(!generated){error('Сначала получи код 3.101.');return}
  try{
   if(!navigator.clipboard?.writeText)throw Error('clipboard');
   await navigator.clipboard.writeText(generated);
-  status('Скопировано! Замени адрес старой закладки Safari.');
- }catch(_){showManual();status('Нажми на выделенный код и выбери «Копировать» в меню Safari.');}
+  status('Готово. Новый код скопирован. Замени им адрес Safari-закладки.');
+ }catch(e){error('Safari запретил копирование. Открой страницу в обычном Safari и разреши доступ к буферу обмена.')}
 });
 </script>
 </body>
