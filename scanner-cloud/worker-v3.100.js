@@ -46,7 +46,7 @@ function parse(raw,q) {
  const ans=asText(x.answer,350);
  return ans?{choices:[],answer:ans,explanation:asText(x.explanation,550),uncertain:!!x.uncertain}:null;
 }
-async function timedFetch(url,options,ms=11000){const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort('timeout'),ms);try{const r=await fetch(url,{...options,signal:ctrl.signal,redirect:'error'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.text();if(data.length>300000)throw new Error('Ответ слишком большой');return JSON.parse(data)}finally{clearTimeout(timer)}}
+async function timedFetch(url,options,ms=11000){const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort('timeout'),ms);try{const r=await fetch(url,{...options,signal:ctrl.signal,redirect:'manual'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.text();if(data.length>300000)throw new Error('Ответ слишком большой');return JSON.parse(data)}finally{clearTimeout(timer)}}
 async function ai(p,env,q,doc='',quick=false) {
  if(!env[p.key])throw new Error('Ключ '+p.id+' не настроен');
  const withImages=Boolean(q.images.length&&p.vision);
