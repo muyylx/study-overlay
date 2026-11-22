@@ -153,7 +153,9 @@ function detectMultiple(question, options){
   const single=/(?:один|одна|одно|одну|одного|єдину|єдиний|только\s+один|тільки\s+один|only\s+one|single)\s+(?:правильн\w*|вірн\w*|коректн\w*|correct|answer|ответ\w*|відповід\w*)/i.test(instruction)
     ||/(?:choose|select|выбер\w*|обер\w*|вибер\w*)\s+(?:only\s+)?(?:one|один|одну|1)\b/i.test(instruction);
   if(single)return false;
-  const controls=options.some(o=>!!o.node?.querySelector?.('input[type="checkbox"],[role="checkbox"],[aria-checked="true"]'));
+  const radios=options.some(o=>!!o.node?.querySelector?.('input[type="radio"],[role="radio"]'));
+  if(radios)return false;
+  const controls=options.some(o=>!!o.node?.querySelector?.('input[type="checkbox"],[role="checkbox"]'));
   const multi=/(?:декілька|кілька|несколько|все|всі|два|дві|три|two|three|several|multiple|all)\s+(?:правильн\w*|вірн\w*|коректн\w*|correct|відповід\w*|ответ\w*|answers|options|варіант\w*|вариант\w*)/i.test(instruction)
     ||/(?:выбер\w*|вибер\w*|обер\w*|select|choose)\s+(?:all|все|всі|несколько|декілька|кілька|two|two or more|два|дві)/i.test(instruction);
   return controls||multi;
@@ -326,7 +328,7 @@ async function run(force=false,mode='manual',sample=null){
   }
   sent.add(sig);lastProcessedSig=sig;
   if(sent.size>100)sent.delete(sent.values().next().value);
-  running=true;controller=new AbortController();showOutput();answer.textContent='';reason.textContent='';refs.replaceChildren();setStatus(IS_KAHOOT?'Ищу быстрый вариант…':'Читаю вопрос…');button.textContent='Стоп';
+  running=true;controller=new AbortController();let timedOut=false;const hardTimeout=setTimeout(()=>{timedOut=true;controller?.abort()},29000);showOutput();answer.textContent='';reason.textContent='';refs.replaceChildren();setStatus(IS_KAHOOT?'Ищу быстрый вариант…':'Читаю вопрос…');button.textContent='Стоп';
   const begin=Date.now();const signal=controller.signal;
   const timer=setInterval(()=>{if(running)status.textContent='Анализ · '+((Date.now()-begin)/1000).toFixed(1)+' с'},500);
   try{
@@ -349,9 +351,9 @@ async function run(force=false,mode='manual',sample=null){
     else{status.textContent='Страница меняется. Ожидаю стабильный вопрос…';}
 
   }catch(e){
-    setStatus(e.name==='AbortError'?'Остановлено':'Не удалось получить ответ');
+    setStatus(e.name==='AbortError'?(timedOut?'Сервер не ответил вовремя':'Остановлено'):'Не удалось получить ответ');
     if(e.name!=='AbortError'){reason.textContent=e.message||String(e);mini.textContent='!'}
-  }finally{clearInterval(timer);button.textContent='Разобрать';running=false;controller=null}
+  }finally{clearInterval(timer);clearTimeout(hardTimeout);button.textContent='Разобрать';running=false;controller=null}
 }
 function draggable(handle){
   handle.addEventListener('pointerdown',e=>{drag=true;moved=false;sx=e.clientX;sy=e.clientY;const r=panel.getBoundingClientRect();dx=r.left;dy=r.top;try{handle.setPointerCapture(e.pointerId)}catch(_){} });
