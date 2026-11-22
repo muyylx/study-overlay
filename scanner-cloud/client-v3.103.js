@@ -156,8 +156,8 @@ function detectMultiple(question, options){
   const radios=options.some(o=>!!o.node?.querySelector?.('input[type="radio"],[role="radio"]'));
   if(radios)return false;
   const controls=options.some(o=>!!o.node?.querySelector?.('input[type="checkbox"],[role="checkbox"]'));
-  const multi=/(?:декілька|кілька|несколько|все|всі|два|дві|три|two|three|several|multiple|all)\s+(?:правильн\w*|вірн\w*|коректн\w*|correct|відповід\w*|ответ\w*|answers|options|варіант\w*|вариант\w*)/i.test(instruction)
-    ||/(?:выбер\w*|вибер\w*|обер\w*|select|choose)\s+(?:all|все|всі|несколько|декілька|кілька|two|two or more|два|дві)/i.test(instruction);
+  const multi=/(?:декілька|кілька|несколько|все|всі|усі|два|дві|три|two|three|several|multiple|all)\s+(?:правильн\w*|вірн\w*|коректн\w*|correct|відповід\w*|ответ\w*|answers|options|варіант\w*|вариант\w*)/i.test(instruction)
+    ||/(?:выбер\w*|вибер\w*|обер\w*|отмет\w*|познач\w*|select|choose)\s+(?:all|все|всі|усі|несколько|декілька|кілька|two|two or more|два|дві)/i.test(instruction);
   return controls||multi;
 }
 function normaliseAnswer(data, question){
