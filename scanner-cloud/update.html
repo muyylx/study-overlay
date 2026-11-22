@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'">
-<title>Scanner Cloud 3.101 · для владельца</title>
+<title>Scanner Cloud 3.103 · для владельца</title>
 <style>
 *{box-sizing:border-box}
 html{color-scheme:dark}
@@ -31,16 +31,16 @@ a{color:#c1ceff}
 <body>
 <main>
 <small>ЛИЧНАЯ ПАНЕЛЬ · БЕЗ АКТИВАЦИИ</small>
-<h1>Scanner Cloud 3.101</h1>
+<h1>Scanner Cloud 3.103</h1>
 <p>Обновление твоего сканера. Без регистрации, нового аккаунта и ввода кода активации.</p>
 <section class="card">
 <h2>Получить новый код</h2>
 <ol class="steps">
-<li>В Safari открой закладки, найди <strong>Scanner Cloud 3.100</strong> и нажми «Изменить».</li>
+<li>В Safari открой закладки, найди <strong>рабочую закладку Scanner Cloud</strong> и нажми «Изменить».</li>
 <li>Скопируй адрес закладки, начинающийся с <code>javascript:</code>.</li>
 <li>Вернись сюда и нажми кнопку ниже. При запросе Safari разреши вставку из буфера.</li>
 </ol>
-<button id="prepare" type="button">Получить код 3.101</button>
+<button id="prepare" type="button">Получить код 3.103</button>
 <div id="status" role="status" aria-live="polite"></div>
 <div id="result">
 <button id="copy" class="secondary" type="button">Копировать готовый код</button>
@@ -62,15 +62,15 @@ function decodeBookmarklet(raw){
  try{return decodeURIComponent(source)}catch(_){return source}
 }
 function extractToken(source){
- if(!source.includes('scanner-cloud-3-100')||!source.includes('study-overlay-3-api.study-overlay-muyylx.workers.dev'))throw Error('В буфере код другого сканера. Скопируй именно старую закладку Scanner Cloud с надписью v3.100, не Scanner Access.');
+ if(!/scanner-cloud-3-(?:100|101|103)/.test(source)||!source.includes('study-overlay-3-api.study-overlay-muyylx.workers.dev'))throw Error('Скопируй адрес существующей рабочей закладки Scanner Cloud, не Scanner Access.');
  const found=source.match(/const\s+TOKEN\s*=\s*'([^'\r\n]{12,250})'/);
  const token=found?.[1]||'';
- if(token==='__SCANNER_PRIVATE_TOKEN__'||!/^[A-Za-z0-9_.~+/=-]{12,250}$/.test(token))throw Error('В этой закладке нет действующего личного токена. Скопируй адрес рабочей закладки Scanner Cloud 3.100.');
+ if(token==='__SCANNER_PRIVATE_TOKEN__'||!/^[A-Za-z0-9_.~+/=-]{12,250}$/.test(token))throw Error('В этой закладке нет действующего личного токена. Скопируй адрес рабочей закладки Scanner Cloud.');
  return token;
 }
 function createBookmarklet(template,token){
  const marker="const TOKEN='__SCANNER_PRIVATE_TOKEN__';";
- if(template.length<15000||template.length>60000||!template.startsWith('(function(){')||!template.includes("const VERSION='3.101';")||template.split(marker).length!==2)throw Error('Получен неподходящий шаблон сканера. Код не меняй.');
+ if(template.length<15000||template.length>60000||!template.startsWith('(function(){')||!template.includes("const VERSION='3.103';")||template.split(marker).length!==2)throw Error('Получен неподходящий шаблон сканера. Код не меняй.');
  return 'javascript:'+encodeURIComponent(template.replace(marker,"const TOKEN='"+token+"';"));
 }
 byId('prepare').addEventListener('click',async()=>{
@@ -84,8 +84,8 @@ byId('prepare').addEventListener('click',async()=>{
   if(raw.length>120000)throw Error('Скопированный код слишком длинный.');
   const token=extractToken(decodeBookmarklet(raw));
   status('Подготавливаю новую закладку…');
-  const res=await fetch('./client-v3.101.js',{cache:'no-store'});
-  if(!res.ok)throw Error('Не удалось получить шаблон 3.101: HTTP '+res.status);
+  const res=await fetch('./client-v3.103.js',{cache:'no-store'});
+  if(!res.ok)throw Error('Не удалось получить шаблон 3.103: HTTP '+res.status);
   const template=await res.text();
   generated=createBookmarklet(template,token);
   byId('result').style.display='block';
@@ -95,7 +95,7 @@ byId('prepare').addEventListener('click',async()=>{
  }finally{byId('prepare').disabled=false}
 });
 byId('copy').addEventListener('click',async()=>{
- if(!generated){error('Сначала получи код 3.101.');return}
+ if(!generated){error('Сначала получи код 3.103.');return}
  try{
   if(!navigator.clipboard?.writeText)throw Error('clipboard');
   await navigator.clipboard.writeText(generated);
