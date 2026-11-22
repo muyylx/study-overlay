@@ -28,7 +28,7 @@ textarea:focus{outline:2px solid #8393ff}
 .hint{font-size:13px;margin:9px 0 14px}
 #source{margin-bottom:12px}
 #verify{margin-top:12px}
-#result{display:none;margin-top:15px}
+a{color:#c1ceff}#output{height:180px;margin:15px 0}#source{height:90px}summary{cursor:pointer;color:#c1ceff}#status{min-height:25px}
 #status{min-height:25px;font-size:14px;white-space:pre-wrap;color:#b9c5eb;margin:13px 0 0}
 #status.error{color:#ffcad1}
 .note{margin-top:18px;font-size:12px;color:#98a9cb}
@@ -41,117 +41,40 @@ a{color:#c1ceff}
 <h1>Scanner Cloud 3.103</h1>
 <p>Обновление твоего сканера. Без регистрации, нового аккаунта и ввода кода активации.</p>
 <section class="card">
-<h2>Получить новый код</h2>
-<ol class="steps">
-<li>В Safari скопируй адрес своей старой рабочей закладки Scanner Cloud (начинается с <code>javascript:</code>).</li>
-<li>Вставь его в поле ниже или используй кнопку «Вставить из буфера».</li>
-<li>Нажми «Подготовить код», затем «Выделить весь код» или «Скопировать код».</li>
-</ol>
-<label for="source">Адрес старой закладки</label>
-<textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Вставь сюда javascript:..."></textarea>
-<button id="paste" class="secondary" type="button">Вставить из буфера</button>
-<button id="prepare" type="button" style="margin-top:10px">Подготовить код 3.103</button>
-<div id="status" role="status" aria-live="polite"></div>
-<div id="result">
-<label for="output">Готовый JavaScript для Safari</label>
-<textarea id="output" readonly spellcheck="false" autocapitalize="off"></textarea>
-<div class="actions">
+<h2>JavaScript для Safari</h2>
+<p>Как на установщике Scanner Access: код сразу виден, его можно скопировать или выделить целиком.</p>
+<button id="copy" type="button">Копировать JavaScript</button>
 <button id="select" class="secondary" type="button">Выделить весь код</button>
-<button id="copy" type="button">Скопировать код</button>
-</div>
-<button id="verify" class="secondary" type="button">Проверить приватный токен без вызова ИИ</button>
-<p class="hint">Проверка отправляет токен только твоему Cloudflare Worker. Модели ИИ не вызываются, токены на них не расходуются. Может учитываться обычный лимит запросов Worker.</p>
-<p>Замени адрес Safari-закладки готовым кодом. Старую закладку лучше сохранить как резервную.</p>
-</div>
+<p><a id="open" href="#" target="_blank" rel="noopener">Открыть код отдельной страницей</a></p>
+<div id="status" role="status" aria-live="polite">Загружаю JavaScript…</div>
+<textarea id="output" readonly spellcheck="false" autocapitalize="off"></textarea>
+<p>В Safari открой редактирование закладки и замени адрес скопированным JavaScript.</p>
+<details style="margin-top:25px"><summary>Перенести приватный токен из старой закладки</summary>
+<p>Публичный код не содержит твоего токена. Для работы личной панели вставь адрес старой рабочей закладки ниже и нажми «Перенести токен».</p>
+<textarea id="source" spellcheck="false" autocapitalize="off" placeholder="javascript:..."></textarea>
+<button id="prepare" class="secondary" type="button">Перенести токен</button>
+<button id="verify" class="secondary" type="button" disabled>Проверить токен без вызова ИИ</button>
+<p id="tokenstatus"></p></details>
 </section>
-<p class="note">Старый код и новый код обрабатываются локально в Safari. При подготовке код и токен никуда не отправляются. Только при отдельном нажатии «Проверить приватный токен» токен передаётся твоему Cloudflare Worker по HTTPS, без обращения к ИИ. Код с токеном никому не пересылай.</p>
+<p class="note">При подготовке токен обрабатывается локально. Проверка токена отправляет его только твоему Cloudflare Worker без обращения к моделям ИИ. Не пересылай личный код другим.</p>
 </main>
 <script>
 
 'use strict';
-const byId=id=>document.getElementById(id);
-const status=message=>{byId('status').textContent=message;byId('status').classList.remove('error')};
-const error=message=>{byId('status').textContent=message;byId('status').classList.add('error')};
-let generated='',privateToken='';
-function decodeBookmarklet(raw){
- const text=String(raw||'').trim();
- if(!/^javascript\s*:/i.test(text))throw Error('Нужен адрес закладки, начинающийся с javascript:.');
- const source=text.slice(text.indexOf(':')+1);
- try{return decodeURIComponent(source)}catch(_){return source}
-}
-function extractToken(source){
- if(!/scanner-cloud-3-(?:100|101|103)/.test(source)||!source.includes('study-overlay-3-api.study-overlay-muyylx.workers.dev'))throw Error('Это не закладка личного Scanner Cloud.');
- const found=source.match(/const\s+TOKEN\s*=\s*'([^'\r\n]{12,250})'/);
- const token=found?.[1]||'';
- if(token==='__SCANNER_PRIVATE_TOKEN__'||!/^[A-Za-z0-9_.~+/=-]{12,250}$/.test(token))throw Error('В старой закладке нет подходящего приватного токена.');
- return token;
-}
-function createBookmarklet(template,token){
- const marker="const TOKEN='__SCANNER_PRIVATE_TOKEN__';";
- if(template.length<15000||template.length>60000||!template.startsWith('(function(){')||!template.includes("const VERSION='3.103';")||template.split(marker).length!==2)throw Error('Шаблон сканера повреждён или не соответствует 3.103.');
- return 'javascript:'+encodeURIComponent(template.replace(marker,"const TOKEN='"+token+"';"));
-}
-function selectOutput(){
- const field=byId('output');
- field.focus();field.select();field.setSelectionRange(0,field.value.length);
- status('Код выделен. Нажми «Копировать» в меню iPhone или кнопку ниже.');
-}
-byId('paste').addEventListener('click',async()=>{
- try{
-  if(!navigator.clipboard?.readText)throw Error('Вставь адрес вручную: удерживай палец на поле и выбери «Вставить».');
-  byId('source').value=await navigator.clipboard.readText();
-  status('Старая закладка вставлена. Нажми «Подготовить код 3.103».');
- }catch(e){error('Автовставка недоступна. Нажми на поле и используй обычную команду «Вставить» в Safari.')}
-});
-byId('prepare').addEventListener('click',async()=>{
- generated='';privateToken='';byId('output').value='';
- byId('result').style.display='none';byId('prepare').disabled=true;
- try{
-  const raw=byId('source').value;
-  if(raw.length>120000)throw Error('Слишком длинный адрес старой закладки.');
-  const token=extractToken(decodeBookmarklet(raw));
-  status('Загружаю новый шаблон…');
-  const res=await fetch('./client-v3.103.js',{cache:'no-store'});
-  if(!res.ok)throw Error('Шаблон недоступен: HTTP '+res.status);
-  const template=await res.text();
-  generated=createBookmarklet(template,token);
-  privateToken=token;
-  byId('output').value=generated;
-  byId('result').style.display='block';
-  status('Код готов. Можешь выделить весь код или скопировать кнопкой.');
- }catch(e){error(e?.message||'Не удалось подготовить код.')}
- finally{byId('prepare').disabled=false}
-});
-byId('select').addEventListener('click',selectOutput);
-byId('copy').addEventListener('click',async()=>{
- if(!generated){error('Сначала подготовь код.');return}
- try{
-  if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');
-  await navigator.clipboard.writeText(generated);
-  status('Полный код скопирован. Замени им адрес закладки Safari.');
- }catch(e){selectOutput();error('Автокопирование недоступно. Код выделен: выбери «Копировать» в меню Safari.')}
-});
-byId('verify').addEventListener('click',async()=>{
- if(!privateToken){error('Сначала подготовь код из старой закладки.');return}
- byId('verify').disabled=true;
- status('Проверяю авторизацию без обращения к моделям ИИ…');
- const ctrl=new AbortController();
- const timer=setTimeout(()=>ctrl.abort(),9000);
- try{
-  // The Worker validates the token before checking request body.
-  // An intentionally empty question returns HTTP 400 if authorized, HTTP 401 otherwise.
-  const response=await fetch('https://study-overlay-3-api.study-overlay-muyylx.workers.dev/solve',{
-   method:'POST',headers:{'Content-Type':'application/json','x-scanner-token':privateToken},
-   body:JSON.stringify({question:'',options:[],multiple:false}),cache:'no-store',signal:ctrl.signal
-  });
-  const data=await response.json().catch(()=>({}));
-  if(response.status===400&&/Не найден текст вопроса/.test(String(data.error||'')))status('Приватный токен действителен. ИИ не вызывался, токены моделей не потрачены.');
-  else if(response.status===401)error('Приватный токен не подходит. Старая закладка не авторизуется.');
-  else if(response.status===429)status('Токен принят, но сработал лимит запросов Worker. ИИ не вызывался.');
-  else error('Проверка не подтверждена. HTTP '+response.status+'. ИИ не вызывался.');
- }catch(e){error('Не удалось связаться с Worker. Это не доказывает, что токен недействителен.')}
- finally{clearTimeout(timer);byId('verify').disabled=false}
-});
+const el=id=>document.getElementById(id);
+let template='',generated='',token='';
+const status=(message,bad=false)=>{el('status').textContent=message;el('status').classList.toggle('error',bad)};
+const encode=s=>'javascript:'+encodeURIComponent(s);
+function decode(value){const v=String(value||'').trim();if(!/^javascript\s*:/i.test(v))throw Error('Вставь адрес старой закладки, начиная с javascript:');const body=v.slice(v.indexOf(':')+1);try{return decodeURIComponent(body)}catch(_){return body}}
+function extract(source){if(!/scanner-cloud-3-(?:100|101|103)/.test(source)||!source.includes('study-overlay-3-api.study-overlay-muyylx.workers.dev'))throw Error('Это не личная закладка Scanner Cloud');const m=source.match(/const\s+TOKEN\s*=\s*'([^'\r\n]{12,250})'/);const t=m?.[1]||'';if(t==='__SCANNER_PRIVATE_TOKEN__'||!/^[A-Za-z0-9_.~+/=-]{12,250}$/.test(t))throw Error('Не найден приватный токен в старой закладке');return t}
+function display(code){generated=code;el('output').value=code;el('open').href='data:text/plain;charset=utf-8,'+encodeURIComponent(code)}
+function select(){const o=el('output');o.focus();o.select();o.setSelectionRange(0,o.value.length)}
+async function load(){try{const r=await fetch('./client-v3.103.js',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);template=await r.text();if(template.length<15000||!template.startsWith('(function(){')||!template.includes("const VERSION='3.103';")||!template.includes("const TOKEN='__SCANNER_PRIVATE_TOKEN__';"))throw Error('Неверный шаблон');display(encode(template));status('Код готов. Для личного доступа перенеси токен из старой закладки в разделе ниже.')}catch(e){status('Не удалось загрузить код: '+e.message,true)}}
+el('copy').addEventListener('click',async()=>{if(!generated){status('Код ещё не загружен',true);return}try{await navigator.clipboard.writeText(generated);status(token?'Личный JavaScript скопирован.':'Код скопирован, но без переноса личного токена сервер не авторизует его.')}catch(_){select();status('Код выделен. Используй «Копировать» в меню Safari.')}});
+el('select').addEventListener('click',()=>{select();status('Весь код выделен. Используй «Копировать» в меню Safari.')});
+el('prepare').addEventListener('click',()=>{try{if(!template)throw Error('Шаблон ещё не загружен');token=extract(decode(el('source').value));display(encode(template.replace("const TOKEN='__SCANNER_PRIVATE_TOKEN__';","const TOKEN='"+token+"';")));el('source').value='';el('verify').disabled=false;el('tokenstatus').textContent='Токен перенесён. Теперь скопируй JavaScript кнопкой наверху.';status('Личный код готов.')}catch(e){el('tokenstatus').textContent=e.message}});
+el('verify').addEventListener('click',async()=>{if(!token)return;el('verify').disabled=true;const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),9000);try{const r=await fetch('https://study-overlay-3-api.study-overlay-muyylx.workers.dev/solve',{method:'POST',headers:{'Content-Type':'application/json','x-scanner-token':token},body:JSON.stringify({question:'',options:[],multiple:false}),cache:'no-store',signal:ctrl.signal});const data=await r.json().catch(()=>({}));el('tokenstatus').textContent=r.status===400&&/Не найден текст вопроса/.test(String(data.error||''))?'Токен принят. ИИ не вызывался.':r.status===401?'Токен отклонён.':r.status===429?'Лимит Worker, ИИ не вызывался.':'Проверка не подтверждена: HTTP '+r.status}catch(_){el('tokenstatus').textContent='Сетевая ошибка при проверке токена.'}finally{clearTimeout(timer);el('verify').disabled=false}});
+load();
 
 </script>
 </body>
