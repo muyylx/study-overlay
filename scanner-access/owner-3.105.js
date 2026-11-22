@@ -11,9 +11,9 @@ async function unseal(env,s){const b=Uint8Array.from(atob(s),x=>x.charCodeAt(0))
 function token(){return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 const P={
  apinex:{name:'APINex',root:'https://api.apinex.bond/v1',model:'free/glm-5.3-flashx'},
- groq:{name:'Groq',root:'https://api.groq.com/openai/v1',model:'llama-3.1-8b-instant'},
+ groq:{name:'Groq',root:'https://api.groq.com/openai/v1',model:'openai/gpt-oss-20b'},
  openrouter:{name:'OpenRouter',root:'https://openrouter.ai/api/v1',model:'openrouter/free'},
- gemini:{name:'Gemini',root:'https://generativelanguage.googleapis.com/v1beta',model:'gemini-2.5-flash'},
+ gemini:{name:'Gemini',root:'https://generativelanguage.googleapis.com/v1beta',model:'gemini-3.8-flash'},
  openai:{name:'OpenAI',root:'https://api.openai.com/v1',model:'gpt-4.1-mini'}
 };
 function detect(k){if(/^sk-apx[A-Za-z0-9_-]{12,200}$/i.test(k))return 'apinex';if(/^gsk_[A-Za-z0-9_-]{12,200}$/.test(k))return 'groq';if(/^sk-or-v1-[A-Za-z0-9_-]{12,200}$/i.test(k))return 'openrouter';if(/^(?:AIza[A-Za-z0-9_-]{20,200}|AQ\.[A-Za-z0-9._-]{20,350})$/.test(k))return 'gemini';if(/^sk-proj-[A-Za-z0-9_-]{12,250}$/.test(k))return 'openai';return null}
@@ -28,12 +28,12 @@ async function verify(p,k){
 }
 function pickModel(p,list,wish){
  if(wish){if(!/^[A-Za-z0-9][A-Za-z0-9._:/-]{2,110}$/.test(wish))throw fault('Некорректная модель');if(list.length&&!list.includes(wish))throw fault('Модель не указана провайдером');return wish}
- const pref=[P[p].model,'free/glm-5.3-flashx','free/qwen-3.8-max','gemini-2.5-flash','llama-3.3-70b-versatile'];
+ const pref=[P[p].model,'free/glm-5.3-flashx','free/qwen-3.8-max','gemini-3.6-flash','gemini-3.5-flash-lite'];
  if(p==='openrouter')return P[p].model;
  if(p==='groq'){
-  const chat=list.filter(x=>!/(guard|moderation|whisper|transcri|speech|tts|audio|embed|rerank)/i.test(x));
+  const chat=list.filter(x=>!/(guard|moderation|whisper|transcri|speech|tts|audio|embed|rerank|llama-3\.1-8b-instant|llama-3\.3-70b-versatile|qwen3\.6-27b)/i.test(x));
   if(!chat.length)throw fault('У Groq не обнаружены подходящие чат-модели');
-  return [P[p].model,'llama-3.3-70b-versatile'].find(x=>chat.includes(x))||chat.find(x=>/llama.*(?:versatile|instant|instruct)/i.test(x))||chat[0];
+  return [P[p].model,'openai/gpt-oss-120b','qwen/qwen3.8-27b'].find(x=>chat.includes(x))||chat[0];
  }
  return pref.find(x=>list.includes(x))||(p==='apinex'?list.find(x=>x.startsWith('free/')):null)||list.find(x=>!/(guard|moderation|whisper|transcri|tts|audio|embed|rerank)/i.test(x))||P[p].model;
 }
@@ -72,14 +72,14 @@ export async function adminOwner(r,env,path){
    result.elapsedMs=Date.now()-begin;
    return result;
   }));
-  return res({version:'3.105',results:checked,checked:checked.length});
+  return res({version:'3.105.1',results:checked,checked:checked.length});
  }
  if(path==='/owner/install'&&r.method==='POST'){
   const t=token();await env.DB.prepare('INSERT INTO owner_sessions(token_hash,created_at) VALUES(?,?)').bind(await sha(t),time()).run();
   await env.DB.prepare('DELETE FROM owner_sessions WHERE token_hash NOT IN (SELECT token_hash FROM owner_sessions ORDER BY created_at DESC LIMIT 3)').run();
   const code=ownerClient.replace('__SCANNER_OWNER_TOKEN__',t);
   if(code.includes('__SCANNER_OWNER_TOKEN__'))throw fault('Не собран код',500);
-  return res({code:'javascript:'+encodeURIComponent(code),version:'3.105'});
+  return res({code:'javascript:'+encodeURIComponent(code),version:'3.105.1'});
  }
  if(path==='/owner/revoke'&&r.method==='POST'){await env.DB.prepare('DELETE FROM owner_sessions').run();return res({ok:true})}
  return res({error:'Не найдено'},404);
@@ -119,14 +119,14 @@ async function solveOne(k,secret,q,timeoutMs=11000){
 }
 export async function publicOwner(req,env,path){
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
- if(path==='/owner/health'&&req.method==='GET')return res({latestClientVersion:'3.105',minimumClientVersion:'3.104',ready:true},200,true);
+ if(path==='/owner/health'&&req.method==='GET')return res({latestClientVersion:'3.105',minimumClientVersion:'3.104',serverVersion:'3.105.1',ready:true},200,true);
  if(path==='/owner/status'&&req.method==='GET'){
   const t=req.headers.get('x-scanner-token')||'';
   if(!/^[A-Za-z0-9_-]{43}$/.test(t))return res({authorized:false},401,true);
   const row=await env.DB.prepare('SELECT token_hash FROM owner_sessions WHERE token_hash=?').bind(await sha(t)).first();
   if(!row)return res({authorized:false},401,true);
   const x=await env.DB.prepare('SELECT count(*) n FROM owner_keys WHERE enabled=1').first();
-  return res({authorized:true,enabledKeys:x?.n||0,version:'3.105'},200,true);
+  return res({authorized:true,enabledKeys:x?.n||0,version:'3.105.1'},200,true);
  }
  if(path!=='/owner/solve'||req.method!=='POST')return res({error:'Не найдено'},404,true);
  const t=req.headers.get('x-scanner-token')||'';
