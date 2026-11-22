@@ -120,6 +120,14 @@ async function solveOne(k,secret,q,timeoutMs=11000){
 export async function publicOwner(req,env,path){
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
  if(path==='/owner/health'&&req.method==='GET')return res({latestClientVersion:'3.105',minimumClientVersion:'3.104',ready:true},200,true);
+ if(path==='/owner/status'&&req.method==='GET'){
+  const t=req.headers.get('x-scanner-token')||'';
+  if(!/^[A-Za-z0-9_-]{43}$/.test(t))return res({authorized:false},401,true);
+  const row=await env.DB.prepare('SELECT token_hash FROM owner_sessions WHERE token_hash=?').bind(await sha(t)).first();
+  if(!row)return res({authorized:false},401,true);
+  const x=await env.DB.prepare('SELECT count(*) n FROM owner_keys WHERE enabled=1').first();
+  return res({authorized:true,enabledKeys:x?.n||0,version:'3.105'},200,true);
+ }
  if(path!=='/owner/solve'||req.method!=='POST')return res({error:'Не найдено'},404,true);
  const t=req.headers.get('x-scanner-token')||'';
  if(!/^[A-Za-z0-9_-]{43}$/.test(t))return res({error:'Скопируй новую личную закладку через админ-панель'},401,true);
