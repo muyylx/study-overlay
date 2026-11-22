@@ -42,15 +42,15 @@ a{color:#c1ceff}
 <p>Обновление твоего сканера. Без регистрации, нового аккаунта и ввода кода активации.</p>
 <section class="card">
 <h2>JavaScript для Safari</h2>
-<p>Как на установщике Scanner Access: код сразу виден, его можно скопировать или выделить целиком.</p>
-<button id="copy" type="button">Копировать JavaScript</button>
-<button id="select" class="secondary" type="button">Выделить весь код</button>
-<p><a id="open" href="#" target="_blank" rel="noopener">Открыть код отдельной страницей</a></p>
+<p>Код виден сразу. Копирование станет доступно после переноса и проверки доступа владельца, чтобы не устанавливать нерабочую закладку.</p>
+<button id="copy" type="button" disabled>Копировать JavaScript</button>
+<button id="select" class="secondary" type="button" disabled>Выделить весь код</button>
+<p id="openWrap" hidden><a id="open" href="#" target="_blank" rel="noopener">Открыть код отдельной страницей</a></p>
 <div id="status" role="status" aria-live="polite">Загружаю JavaScript…</div>
 <textarea id="output" readonly spellcheck="false" autocapitalize="off"></textarea>
 <p>В Safari открой редактирование закладки и замени адрес скопированным JavaScript.</p>
-<details style="margin-top:25px"><summary>Перенести приватный токен из старой закладки</summary>
-<p>Публичный код не содержит твоего токена. Для работы личной панели вставь адрес старой рабочей закладки ниже и нажми «Перенести токен».</p>
+<details id="authDetails" open style="margin-top:25px"><summary>Восстановить доступ личной закладки</summary>
+<p>Публичный код не содержит твоего токена. Для работы личной панели вставь адрес старой рабочей закладки ниже и нажми «Перенести токен». API-ключи моделей и доступы участников не меняются.</p>
 <textarea id="source" spellcheck="false" autocapitalize="off" placeholder="javascript:..."></textarea>
 <button id="prepare" class="secondary" type="button">Перенести токен</button>
 <button id="verify" class="secondary" type="button" disabled>Проверить токен без вызова ИИ</button>
@@ -68,12 +68,13 @@ const encode=s=>'javascript:'+encodeURIComponent(s);
 function decode(value){const v=String(value||'').trim();if(!/^javascript\s*:/i.test(v))throw Error('Вставь адрес старой закладки, начиная с javascript:');const body=v.slice(v.indexOf(':')+1);try{return decodeURIComponent(body)}catch(_){return body}}
 function extract(source){if(!/scanner-cloud-3-(?:100|101|103)/.test(source)||!source.includes('study-overlay-3-api.study-overlay-muyylx.workers.dev'))throw Error('Это не личная закладка Scanner Cloud');const m=source.match(/const\s+TOKEN\s*=\s*'([^'\r\n]{12,250})'/);const t=m?.[1]||'';if(t==='__SCANNER_PRIVATE_TOKEN__'||!/^[A-Za-z0-9_.~+/=-]{12,250}$/.test(t))throw Error('Не найден приватный токен в старой закладке');return t}
 function display(code){generated=code;el('output').value=code;el('open').href='data:text/plain;charset=utf-8,'+encodeURIComponent(code)}
+function ready(ok){el('copy').disabled=!ok;el('select').disabled=!ok;el('openWrap').hidden=!ok}
 function select(){const o=el('output');o.focus();o.select();o.setSelectionRange(0,o.value.length)}
-async function load(){try{const r=await fetch('./client-v3.103.js',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);template=await r.text();if(template.length<15000||!template.startsWith('(function(){')||!template.includes("const VERSION='3.103';")||!template.includes("const TOKEN='__SCANNER_PRIVATE_TOKEN__';"))throw Error('Неверный шаблон');display(encode(template));status('Код готов. Для личного доступа перенеси токен из старой закладки в разделе ниже.')}catch(e){status('Не удалось загрузить код: '+e.message,true)}}
-el('copy').addEventListener('click',async()=>{if(!generated){status('Код ещё не загружен',true);return}try{await navigator.clipboard.writeText(generated);status(token?'Личный JavaScript скопирован.':'Код скопирован, но без переноса личного токена сервер не авторизует его.')}catch(_){select();status('Код выделен. Используй «Копировать» в меню Safari.')}});
-el('select').addEventListener('click',()=>{select();status('Весь код выделен. Используй «Копировать» в меню Safari.')});
+async function load(){try{const r=await fetch('./client-v3.103.js',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);template=await r.text();if(template.length<15000||!template.startsWith('(function(){')||!template.includes("const VERSION='3.103';")||!template.includes("const TOKEN='__SCANNER_PRIVATE_TOKEN__';"))throw Error('Неверный шаблон');display(encode(template));ready(false);status('Код загружен, но пока без авторизации. Скопируй адрес старой рабочей закладки в поле ниже и нажми «Перенести токен».')}catch(e){status('Не удалось загрузить код: '+e.message,true)}}
+el('copy').addEventListener('click',async()=>{if(!token){status('Сначала восстанови и проверь доступ владельца.',true);return}if(!generated){status('Код ещё не загружен',true);return}try{await navigator.clipboard.writeText(generated);status(token?'Личный JavaScript скопирован.':'Код скопирован, но без переноса личного токена сервер не авторизует его.')}catch(_){select();status('Код выделен. Используй «Копировать» в меню Safari.')}});
+el('select').addEventListener('click',()=>{if(!token){status('Сначала восстанови доступ владельца.',true);return}select();status('Весь код выделен. Используй «Копировать» в меню Safari.')});
 el('prepare').addEventListener('click',()=>{try{if(!template)throw Error('Шаблон ещё не загружен');token=extract(decode(el('source').value));display(encode(template.replace("const TOKEN='__SCANNER_PRIVATE_TOKEN__';","const TOKEN='"+token+"';")));el('source').value='';el('verify').disabled=false;el('tokenstatus').textContent='Токен перенесён. Теперь скопируй JavaScript кнопкой наверху.';status('Личный код готов.')}catch(e){el('tokenstatus').textContent=e.message}});
-el('verify').addEventListener('click',async()=>{if(!token)return;el('verify').disabled=true;const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),9000);try{const r=await fetch('https://study-overlay-3-api.study-overlay-muyylx.workers.dev/solve',{method:'POST',headers:{'Content-Type':'application/json','x-scanner-token':token},body:JSON.stringify({question:'',options:[],multiple:false}),cache:'no-store',signal:ctrl.signal});const data=await r.json().catch(()=>({}));el('tokenstatus').textContent=r.status===400&&/Не найден текст вопроса/.test(String(data.error||''))?'Токен принят. ИИ не вызывался.':r.status===401?'Токен отклонён.':r.status===429?'Лимит Worker, ИИ не вызывался.':'Проверка не подтверждена: HTTP '+r.status}catch(_){el('tokenstatus').textContent='Сетевая ошибка при проверке токена.'}finally{clearTimeout(timer);el('verify').disabled=false}});
+el('verify').addEventListener('click',async()=>{if(!token)return;el('verify').disabled=true;const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),9000);try{const r=await fetch('https://study-overlay-3-api.study-overlay-muyylx.workers.dev/solve',{method:'POST',headers:{'Content-Type':'application/json','x-scanner-token':token},body:JSON.stringify({question:'',options:[],multiple:false}),cache:'no-store',signal:ctrl.signal});const data=await r.json().catch(()=>({}));const accepted=r.status===400&&/Не найден текст вопроса/.test(String(data.error||''));ready(accepted);el('tokenstatus').textContent=accepted?'Доступ владельца подтверждён. Теперь кнопки копирования активны. ИИ не вызывался.':r.status===401?'Доступ отклонён. Проверь, что вставил именно старую рабочую закладку Scanner Cloud.':r.status===429?'Лимит Worker, ИИ не вызывался.':'Проверка не подтверждена: HTTP '+r.status}catch(_){ready(false);el('tokenstatus').textContent='Сетевая ошибка при проверке токена.'}finally{clearTimeout(timer);el('verify').disabled=false}});
 load();
 
 </script>
