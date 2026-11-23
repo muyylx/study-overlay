@@ -29,6 +29,9 @@ const updateLink=document.createElement('a');updateLink.href='https://muyylx.git
 updateNotice.append(updateText,updateLink);
 const ocrRow=document.createElement('div');ocrRow.style.cssText='margin-top:5px;';
 const readTextButton=document.createElement('button');readTextButton.type='button';readTextButton.textContent='📄 Прочитать текст листа';readTextButton.style.cssText='background:#363e61;color:white;border:1px solid #7887bd;border-radius:13px;padding:7px 12px;font:600 12px -apple-system,sans-serif;';ocrRow.append(readTextButton);
+const photoInput=document.createElement('input');photoInput.type='file';photoInput.accept='image/jpeg,image/png,image/webp';photoInput.style.display='none';
+const photoButton=document.createElement('button');photoButton.type='button';photoButton.textContent='Фото…';photoButton.style.cssText='margin-left:6px;background:#363e61;color:white;border:1px solid #7887bd;border-radius:13px;padding:7px 10px;font:600 12px -apple-system,sans-serif;';
+ocrRow.append(photoButton,photoInput);
 panel.append(main,ocrRow,mini,output,updateNotice,version);document.body.appendChild(panel);
 let updateAvailable=false,updateRequired=false,versionTimer=null;
 let running=false,automatic=false,controller=null,signature='',drag=false,moved=false,sx=0,sy=0,dx=0,dy=0;
@@ -317,18 +320,18 @@ async function encodeTextImage(el){
   return data;
 }
 let readingText=false;
-async function readWorksheetImage(){
+async function readWorksheetImage(localImage=null){
   if(readingText)return;
   const imgs=Array.from(document.querySelectorAll('img,canvas')).filter(el=>{
     if(el.closest('nav,header,footer,aside,[aria-hidden="true"]'))return false;
     const r=el.getBoundingClientRect();return visible(el)&&r.width>=160&&r.height>=130&&r.width*r.height>=30000;
   }).sort((a,b)=>{const x=a.getBoundingClientRect(),y=b.getBoundingClientRect();return y.width*y.height-x.width*x.height});
-  if(!imgs.length){setStatus('Не вижу большого изображения');reason.textContent='Этот режим читает элементы img/canvas, но не чужие iframe.';return}
+  if(!imgs.length&&!localImage){setStatus('Не вижу большого изображения');reason.textContent='Этот режим читает элементы img/canvas, но не чужие iframe.';return}
   readingText=true;readTextButton.disabled=true;readTextButton.textContent='Читаю…';
   answer.textContent='';reason.textContent='';refs.replaceChildren();setStatus('Распознаю текст изображения…');
   const start=Date.now(),abort=new AbortController(),timer=setTimeout(()=>abort.abort(),20000);
   try{
-    const image=await encodeTextImage(imgs[0]);
+    const image=await encodeTextImage(localImage||imgs[0]);
     const res=await fetch(API+'/ocr',{method:'POST',mode:'cors',signal:abort.signal,headers:{'Content-Type':'application/json','x-scanner-token':TOKEN},body:JSON.stringify({image})});
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Ошибка OCR '+res.status);
@@ -339,7 +342,22 @@ async function readWorksheetImage(){
   }catch(e){setStatus('Не удалось прочитать изображение');reason.textContent=e.name==='AbortError'?'Время ожидания превышено':String(e.message||e)}
   finally{clearTimeout(timer);readTextButton.disabled=false;readTextButton.textContent='📄 Прочитать текст листа';readingText=false}
 }
-readTextButton.addEventListener('click',readWorksheetImage);
+readTextButton.addEventListener('click',()=>readWorksheetImage());
+photoButton.addEventListener('click',()=>photoInput.click());
+photoInput.addEventListener('change',()=>{
+ const file=photoInput.files?.[0];if(!file)return;
+ if(!/^image\/(jpeg|png|webp)$/.test(file.type)){setStatus('Нужен JPG, PNG или WebP');return}
+ const reader=new FileReader();
+ reader.onerror=()=>{setStatus('Не удалось открыть фотографию')};
+ reader.onload=()=>{
+   const image=new Image();
+   image.onload=()=>readWorksheetImage(image);
+   image.onerror=()=>{setStatus('Повреждённый файл изображения')};
+   image.src=String(reader.result||'');
+ };
+ reader.readAsDataURL(file);
+ photoInput.value='';
+});
 
 function addResult(data,question={}){
   const multi=question.multiple===true;
