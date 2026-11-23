@@ -1,83 +1,10 @@
 <!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self' https://study-overlay-3-api.study-overlay-muyylx.workers.dev; base-uri 'none'; form-action 'none'">
-<title>Scanner Cloud 3.104 · для владельца</title>
-<style>
-*{box-sizing:border-box}
-html{color-scheme:dark}
-body{margin:0;min-height:100vh;background:#101524;color:#eef1ff;font:16px -apple-system,BlinkMacSystemFont,Arial,sans-serif;line-height:1.5;padding:24px 18px}
-main{max-width:500px;margin:36px auto 0}
-small{font-size:12px;color:#a6b4d7}
-h1{font-size:28px;margin:8px 0 8px;letter-spacing:-.4px}
-p{color:#b6c1da;margin:10px 0}
-.card{border:1px solid #414d6c;background:#1a2235;border-radius:18px;padding:20px;margin-top:21px}
-h2{font-size:18px;margin:0 0 10px}
-.steps{padding-left:21px;margin:14px 0 20px;color:#e0e7fa}
-.steps li{padding-left:3px;margin-bottom:10px}
-button{border:0;border-radius:13px;background:#6075e7;color:#fff;font:700 16px -apple-system,BlinkMacSystemFont,Arial,sans-serif;padding:15px 16px;width:100%;min-height:52px;cursor:pointer}
-button:disabled{opacity:.6;cursor:default}
-button.secondary{background:#303a58}
-textarea{display:block;width:100%;min-height:105px;resize:vertical;background:#0d1323;color:#f0f3ff;border:1px solid #526185;border-radius:12px;padding:12px;font:13px ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
-textarea:focus{outline:2px solid #8393ff}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-.actions button{font-size:14px;padding:12px 8px}
-.hint{font-size:13px;margin:9px 0 14px}
-#source{margin-bottom:12px}
-#verify{margin-top:12px}
-a{color:#c1ceff}#output{height:180px;margin:15px 0}#source{height:90px}summary{cursor:pointer;color:#c1ceff}#status{min-height:25px}
-#status{min-height:25px;font-size:14px;white-space:pre-wrap;color:#b9c5eb;margin:13px 0 0}
-#status.error{color:#ffcad1}
-.note{margin-top:18px;font-size:12px;color:#98a9cb}
-a{color:#c1ceff}
-</style>
-</head>
-<body>
-<main>
-<div role="alert" style="border:1px solid #a96b32;background:#392819;color:#ffe4bd;padding:14px;border-radius:12px;font-size:14px;line-height:1.5"><strong>Внимание: эта страница устанавливает устаревшую версию 3.103.</strong> Для Scanner Cloud 3.105 устанавливай личную закладку через свою закрытую админ-панель, раздел «Мои ключи» → «Создать JavaScript». Старый код отсюда заменять новой версией нельзя.</div>
-<small>ЛИЧНАЯ ПАНЕЛЬ · БЕЗ АКТИВАЦИИ</small>
-<h1>Scanner Cloud 3.104</h1>
-<p>Обновление твоего сканера. Без регистрации, нового аккаунта и ввода кода активации.</p>
-<section class="card">
-<h2>JavaScript для Safari</h2>
-<p>Код виден сразу. Копирование станет доступно после переноса и проверки доступа владельца, чтобы не устанавливать нерабочую закладку.</p>
-<button id="copy" type="button" disabled>Копировать JavaScript</button>
-<button id="select" class="secondary" type="button" disabled>Выделить весь код</button>
-<p id="openWrap" hidden><a id="open" href="#" target="_blank" rel="noopener">Открыть код отдельной страницей</a></p>
-<div id="status" role="status" aria-live="polite">Загружаю JavaScript…</div>
-<textarea id="output" readonly spellcheck="false" autocapitalize="off"></textarea>
-<p>В Safari открой редактирование закладки и замени адрес скопированным JavaScript.</p>
-<details id="authDetails" open style="margin-top:25px"><summary>Восстановить доступ личной закладки</summary>
-<p>Публичный код не содержит твоего токена. Для работы личной панели вставь адрес старой рабочей закладки ниже и нажми «Перенести токен». API-ключи моделей и доступы участников не меняются.</p>
-<textarea id="source" spellcheck="false" autocapitalize="off" placeholder="javascript:..."></textarea>
-<button id="prepare" class="secondary" type="button">Перенести токен</button>
-<button id="verify" class="secondary" type="button" disabled>Проверить токен без вызова ИИ</button>
-<p id="tokenstatus"></p></details>
-</section>
-<p class="note">При подготовке токен обрабатывается локально. Проверка токена отправляет его только твоему Cloudflare Worker без обращения к моделям ИИ. Не пересылай личный код другим.</p>
-</main>
-<script>
-
-'use strict';
-const el=id=>document.getElementById(id);
-let template='',generated='',token='';
-const status=(message,bad=false)=>{el('status').textContent=message;el('status').classList.toggle('error',bad)};
-const encode=s=>'javascript:'+encodeURIComponent(s);
-function decode(value){const v=String(value||'').trim();if(!/^javascript\s*:/i.test(v))throw Error('Вставь адрес старой закладки, начиная с javascript:');const body=v.slice(v.indexOf(':')+1);try{return decodeURIComponent(body)}catch(_){return body}}
-function extract(source){if(!/scanner-cloud-3-(?:100|101|103|104)/.test(source)||!source.includes('study-overlay-3-api.study-overlay-muyylx.workers.dev'))throw Error('Это не личная закладка Scanner Cloud');const m=source.match(/const\s+TOKEN\s*=\s*'([^'\r\n]{12,250})'/);const t=m?.[1]||'';if(t==='__SCANNER_PRIVATE_TOKEN__'||!/^[A-Za-z0-9_.~+/=-]{12,250}$/.test(t))throw Error('Не найден приватный токен в старой закладке');return t}
-function display(code){generated=code;el('output').value=code;el('open').href='data:text/plain;charset=utf-8,'+encodeURIComponent(code)}
-function ready(ok){el('copy').disabled=!ok;el('select').disabled=!ok;el('openWrap').hidden=!ok}
-function select(){const o=el('output');o.focus();o.select();o.setSelectionRange(0,o.value.length)}
-async function load(){try{const r=await fetch('./client-v3.104.js',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);template=await r.text();if(template.length<15000||!template.startsWith('(function(){')||!template.includes("const VERSION='3.104';")||!template.includes("const TOKEN='__SCANNER_PRIVATE_TOKEN__';"))throw Error('Неверный шаблон');display(encode(template));ready(false);status('Код загружен, но пока без авторизации. Скопируй адрес старой рабочей закладки в поле ниже и нажми «Перенести токен».')}catch(e){status('Не удалось загрузить код: '+e.message,true)}}
-el('copy').addEventListener('click',async()=>{if(!token){status('Сначала восстанови и проверь доступ владельца.',true);return}if(!generated){status('Код ещё не загружен',true);return}try{await navigator.clipboard.writeText(generated);status(token?'Личный JavaScript скопирован.':'Код скопирован, но без переноса личного токена сервер не авторизует его.')}catch(_){select();status('Код выделен. Используй «Копировать» в меню Safari.')}});
-el('select').addEventListener('click',()=>{if(!token){status('Сначала восстанови доступ владельца.',true);return}select();status('Весь код выделен. Используй «Копировать» в меню Safari.')});
-el('prepare').addEventListener('click',()=>{try{if(!template)throw Error('Шаблон ещё не загружен');token=extract(decode(el('source').value));display(encode(template.replace("const TOKEN='__SCANNER_PRIVATE_TOKEN__';","const TOKEN='"+token+"';")));el('source').value='';el('verify').disabled=false;el('tokenstatus').textContent='Токен перенесён. Теперь скопируй JavaScript кнопкой наверху.';status('Личный код готов.')}catch(e){el('tokenstatus').textContent=e.message}});
-el('verify').addEventListener('click',async()=>{if(!token)return;el('verify').disabled=true;const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),9000);try{const r=await fetch('https://study-overlay-3-api.study-overlay-muyylx.workers.dev/solve',{method:'POST',headers:{'Content-Type':'application/json','x-scanner-token':token},body:JSON.stringify({question:'',options:[],multiple:false}),cache:'no-store',signal:ctrl.signal});const data=await r.json().catch(()=>({}));const accepted=r.status===400&&/Не найден текст вопроса/.test(String(data.error||''));ready(accepted);el('tokenstatus').textContent=accepted?'Доступ владельца подтверждён. Теперь кнопки копирования активны. ИИ не вызывался.':r.status===401?'Доступ отклонён. Проверь, что вставил именно старую рабочую закладку Scanner Cloud.':r.status===429?'Лимит Worker, ИИ не вызывался.':'Проверка не подтверждена: HTTP '+r.status}catch(_){ready(false);el('tokenstatus').textContent='Сетевая ошибка при проверке токена.'}finally{clearTimeout(timer);el('verify').disabled=false}});
-load();
-
-</script>
-</body>
-</html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Scanner Cloud • Установка</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101421;color:#f5f6ff;font:16px -apple-system,BlinkMacSystemFont,Arial,sans-serif}main{width:min(92vw,550px);padding:26px;border:1px solid #3a435a;border-radius:20px;background:#1c2335;box-shadow:0 16px 50px #0004}h1{font-size:25px;margin-top:0}p,li{line-height:1.55;color:#d1d8ee}li{margin-bottom:12px}strong{color:white}.note{padding:14px;border:1px solid #536184;border-radius:12px;color:#dee9ff;background:#252f49}code{color:#b5c8ff}a{color:#b6caff}</style>
+</head><body><main>
+<h1>Scanner Cloud • личная Safari-закладка</h1>
+<p>Перенос токена из старой закладки отключён. Новую личную закладку выпускает только приватная панель владельца. Старые рабочие закладки не отключены.</p>
+<ol><li>Открой свою <strong>приватную админ-панель Scanner Access</strong> по сохранённому личному адресу.</li><li>Войди с паролем администратора.</li><li>Открой раздел личной Safari-закладки и нажми <strong>«Создать личную закладку»</strong>.</li><li>Скопируй выданный JavaScript в адрес своей закладки Safari.</li></ol>
+<div class="note">Код активации участника и пароль администратора не нужно вставлять на эту публичную страницу. Личные токены не передаются через сайт GitHub Pages.</div>
+<p>Если потеряна сессия участника, используй в Scanner Access кнопку <strong>«Восстановить вход без нового кода»</strong>, а не одноразовое приглашение.</p>
+<p><a href="./README.md">Документация проекта</a></p></main></body></html>
