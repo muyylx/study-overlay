@@ -1,10 +1,114 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Scanner Cloud • Установка</title>
-<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101421;color:#f5f6ff;font:16px -apple-system,BlinkMacSystemFont,Arial,sans-serif}main{width:min(92vw,550px);padding:26px;border:1px solid #3a435a;border-radius:20px;background:#1c2335;box-shadow:0 16px 50px #0004}h1{font-size:25px;margin-top:0}p,li{line-height:1.55;color:#d1d8ee}li{margin-bottom:12px}strong{color:white}.note{padding:14px;border:1px solid #536184;border-radius:12px;color:#dee9ff;background:#252f49}code{color:#b5c8ff}a{color:#b6caff}</style>
-</head><body><main>
-<h1>Scanner Cloud • личная Safari-закладка</h1>
-<p>Перенос токена из старой закладки отключён. Новую личную закладку выпускает только приватная панель владельца. Старые рабочие закладки не отключены.</p>
-<ol><li>Открой свою <strong>приватную админ-панель Scanner Access</strong> по сохранённому личному адресу.</li><li>Войди с паролем администратора.</li><li>Открой раздел личной Safari-закладки и нажми <strong>«Создать личную закладку»</strong>.</li><li>Скопируй выданный JavaScript в адрес своей закладки Safari.</li></ol>
-<div class="note">Код активации участника и пароль администратора не нужно вставлять на эту публичную страницу. Личные токены не передаются через сайт GitHub Pages.</div>
-<p>Если потеряна сессия участника, используй в Scanner Access кнопку <strong>«Восстановить вход без нового кода»</strong>, а не одноразовое приглашение.</p>
-<p><a href="./README.md">Документация проекта</a></p></main></body></html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="index,follow">
+<meta name="referrer" content="no-referrer">
+<title>Scanner Cloud · JavaScript для Safari</title>
+<style>
+:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;background:#0f1320;color:#f0f3ff;padding:28px 15px 64px;display:flex;justify-content:center;align-items:center}
+main{width:min(100%,620px);background:#1c2335;border:1px solid #3a435d;border-radius:20px;padding:22px;box-shadow:0 16px 45px #0003}
+h1{font-size:clamp(23px,5vw,29px);line-height:1.2;margin:0 0 8px;letter-spacing:-.02em}
+h2{font-size:18px;margin:25px 0 10px}
+p,li{color:#d2d9ed;line-height:1.55;font-size:15px}
+.lead{margin:0 0 17px}
+.pill{display:inline-block;color:#bccdff;font-size:12px;font-weight:700;letter-spacing:.08em;margin-bottom:12px;text-transform:uppercase}
+.status{border:1px solid #475879;border-radius:12px;background:#253049;padding:12px 14px;font-size:14px;line-height:1.5;margin:0 0 12px;color:#d7e4ff}
+.status.bad{border-color:#9a5959;color:#ffbebe}
+textarea{resize:vertical;min-height:145px;width:100%;background:#101827;border:1px solid #55617b;border-radius:12px;padding:14px;color:#e2e8fc;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+button{cursor:pointer;border:0;border-radius:12px;padding:13px 15px;font:700 15px -apple-system,BlinkMacSystemFont,sans-serif;color:white;background:#5969df}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.secondary{background:#303b58;border:1px solid #4b5b7f}
+ol{padding-left:22px;margin-bottom:12px}li{margin:8px 0}
+a{color:#b7caff}
+.small{font-size:13px;color:#b9c5e1}
+.sep{height:1px;background:#37415c;margin:24px 0}
+.footer{font-size:13px;color:#aab8d6;margin-top:18px}
+strong{color:white}
+@media(max-width:430px){body{align-items:flex-start;padding:18px 10px 42px}main{padding:18px;border-radius:17px}button{width:100%}}
+</style>
+</head>
+<body><main>
+<div class="pill">Scanner Cloud · для участников</div>
+<h1>JavaScript для Safari</h1>
+<p class="lead">Это <strong>обычная пользовательская закладка</strong>. Она открывает панель Scanner Access на странице. Для входа нужен код активации, выданный администратором.</p>
+
+<div class="status" id="status" role="status" aria-live="polite">Загружаю актуальный JavaScript…</div>
+<label for="code" class="small">Код закладки (его нужно вставить в поле «Адрес» в Safari):</label>
+<textarea id="code" readonly spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="JavaScript появится здесь после загрузки"></textarea>
+<div class="actions">
+<button id="copy" type="button" disabled>Скопировать JavaScript</button>
+<button id="select" class="secondary" type="button" disabled>Выделить код</button>
+<button id="reload" class="secondary" type="button">Обновить код</button>
+</div>
+
+<h2>Как установить на iPhone</h2>
+<ol>
+<li>Нажми <strong>«Скопировать JavaScript»</strong>.</li>
+<li>В Safari сохрани любую страницу в закладки через «Поделиться» → «Добавить закладку».</li>
+<li>Открой список закладок → «Изменить» → выбери созданную закладку.</li>
+<li>Полностью замени её <strong>адрес</strong> скопированным JavaScript и сохрани.</li>
+<li>Открой нужную страницу и запусти закладку. При первом входе введи <strong>свой код от администратора</strong> в появившейся панели.</li>
+</ol>
+<p class="small">Если Safari не разрешает автоматическое копирование, нажми «Выделить код» и скопируй его через меню iPhone.</p>
+<div class="sep"></div>
+<p><strong>Для владельца:</strong> личный JavaScript создаётся отдельно в приватной админ-панели. Здесь нельзя получить токен владельца, и перенос старых токенов не требуется.</p>
+<p class="small">После активации вход обычно сохраняется. Если Safari потерял сессию, в панели доступна функция восстановления входа без нового кода при наличии действующей сессии.</p>
+<p class="footer">Источник кода: публичный Worker Scanner Access. <a id="raw" href="https://scanner-access-a43f105622.study-overlay-muyylx.workers.dev/public-bookmarklet" target="_blank" rel="noopener noreferrer">Открыть исходный JavaScript отдельно</a>.</p>
+</main>
+<script>
+'use strict';
+const SRC='https://scanner-access-a43f105622.study-overlay-muyylx.workers.dev/public-bookmarklet';
+const status=document.getElementById('status');
+const code=document.getElementById('code');
+const copy=document.getElementById('copy');
+const select=document.getElementById('select');
+const reload=document.getElementById('reload');
+let current='';
+function say(message,bad=false){status.textContent=message;status.classList.toggle('bad',bad);}
+function selectAll(){
+ code.focus();code.select();
+ try{code.setSelectionRange(0,code.value.length)}catch(e){}
+}
+async function load(){
+ reload.disabled=true;copy.disabled=true;select.disabled=true;current='';code.value='';
+ say('Загружаю актуальный JavaScript…');
+ const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),12000);
+ try{
+  const response=await fetch(SRC,{cache:'no-store',mode:'cors',signal:abort.signal});
+  if(!response.ok)throw new Error('Сервер вернул HTTP '+response.status);
+  const value=(await response.text()).trim();
+  if(!value.startsWith('javascript:')||value.length<1500||!value.includes('scanner-access-participant')||value.includes('__SCANNER_OWNER_TOKEN__'))throw new Error('Сервер вернул неправильный пользовательский код');
+  current=value;code.value=value;
+  copy.disabled=false;select.disabled=false;
+  say('Публичный JavaScript загружен. Код готов к копированию ('+value.length.toLocaleString('ru-RU')+' символов).');
+ }catch(err){
+  say('Не удалось загрузить код: '+(err.name==='AbortError'?'истекло время ожидания':err.message)+'. Попробуй кнопку «Обновить код» или ссылку ниже.',true);
+ }finally{clearTimeout(timer);reload.disabled=false}
+}
+copy.addEventListener('click',async()=>{
+ if(!current)return;
+ try{
+  if(!navigator.clipboard?.writeText)throw new Error('Clipboard недоступен');
+  await navigator.clipboard.writeText(current);
+  say('JavaScript скопирован. Вставь его в поле адреса закладки Safari.');
+ }catch(err){
+  selectAll();
+  let ok=false;
+  try{ok=!!document.execCommand?.('copy')}catch(e){}
+  if(ok)say('JavaScript скопирован. Вставь его в адрес закладки Safari.');
+  else say('Автоматическое копирование заблокировано. Код выделен, выбери «Копировать» в меню Safari.');
+ }
+});
+select.addEventListener('click',()=>{
+ if(!current)return;selectAll();
+ say('Весь код выделен. Выбери «Копировать» в меню Safari.');
+});
+reload.addEventListener('click',load);
+load();
+</script>
+</body></html>
