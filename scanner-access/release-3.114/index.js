@@ -191,17 +191,18 @@ async function transcribeParticipantPhoto(payload,env,user){
  const model=config.roles.vision||'free/gemini-3.8-flash';
  const task='ТЫ OCR для учебных материалов. Только дословно переписывай текст с картинки, в том числе номера заданий и слова в скобках. НЕ решай упражнения, НЕ заполняй пропуски, НЕ выбирай варианты и НЕ предлагай ответы. Неразборчивые места отмечай [неразборчиво]. Пропуски сохраняй как ____. Не смешивай рекламу вокруг листа с текстом упражнений. Выдай только JSON в формате {"title":"...","lines":["..."],"unreadable":["..."]}.';
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),16000),providerStarted=Date.now();
+ const ocrIssue=(message,status=502,code='OCR_ERROR')=>send({error:message,code,elapsedMs:Date.now()-started,providerMs:Date.now()-providerStarted},status);
  try{
   const upstream=await fetch('https://api.apinex.bond/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({model,messages:[{role:'system',content:task},{role:'user',content:[{type:'text',text:'Перепиши видимый текст листа, сохраняя порядок. Не добавляй ответы.'},{type:'image_url',image_url:{url:data}}]}],temperature:0,max_tokens:3000}),signal:controller.signal});
   if(!upstream.ok){
   const status=upstream.status;
   const msg=status===401||status===403?'APINex отклонил личный API-ключ':status===404?'Vision-модель '+model+' не найдена в APINex':status===429?'Лимит APINex исчерпан':status===400||status===422?'Vision-модель отклонила изображение':'API распознавания вернул HTTP '+status;
-  return fail(msg,status===429?429:502);
+  return ocrIssue(msg,status===429?429:502,'APINEX_'+status);
  }
   const j=await upstream.json();let raw=j.choices?.[0]?.message?.content||'';
   if(Array.isArray(raw))raw=raw.map(p=>p.text||'').join('');
   const rawText=String(raw||'').trim();
-  if(!rawText)return fail('Vision-модель вернула пустой ответ. Проверь поддержку изображений.',502);
+  if(!rawText)return ocrIssue('Vision-модель вернула пустой ответ. Проверь поддержку изображений.',502,'EMPTY_OUTPUT');
   let parsed;
   try{parsed=JSON.parse(rawText.replace(/^\x60{3}(?:json)?\s*/i,'').replace(/\x60{3}\s*$/,''))}
   catch(_){
@@ -210,10 +211,14 @@ async function transcribeParticipantPhoto(payload,env,user){
    if(!parsed)parsed={title:'Распознанный текст',lines:rawText.replace(/^\x60{3}(?:text)?\s*/i,'').replace(/\x60{3}\s*$/,'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,100),unreadable:[]};
   }
   const lines=(Array.isArray(parsed.lines)?parsed.lines:[]).filter(x=>typeof x==='string').map(x=>x.trim().slice(0,350)).filter(Boolean).slice(0,100);
-  if(!lines.length)return fail('На изображении не найден читаемый текст',422);
+  if(!lines.length)return ocrIssue('На изображении не найден читаемый текст',422,'NO_TEXT');
   const unreadable=(Array.isArray(parsed.unreadable)?parsed.unreadable:[]).filter(x=>typeof x==='string').map(x=>x.slice(0,140)).slice(0,20);
   return send({mode:'transcription-only',title:String(parsed.title||'').slice(0,140),lines,unreadable,elapsedMs:Date.now()-started,providerMs:Date.now()-providerStarted});
- }catch(e){return fail(e.name==='AbortError'?'OCR не ответил за 16 секунд':'OCR временно недоступен',502)}
+ }catch(e){
+ const code=e.name==='AbortError'?'TIMEOUT':e instanceof SyntaxError?'UPSTREAM_JSON':'UPSTREAM_NETWORK';
+ const message=code==='TIMEOUT'?'OCR не ответил за 16 секунд':code==='UPSTREAM_JSON'?'APINex вернул некорректный JSON':'Нет ответа от OCR-сервиса';
+ return ocrIssue(message,502,code);
+}
  finally{clearTimeout(timer)}
 }
 
