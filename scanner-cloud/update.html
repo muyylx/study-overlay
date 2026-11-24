@@ -35,6 +35,15 @@ strong{color:white}
 <body><main>
 <div class="pill">Scanner Cloud · для участников</div>
 <h1>JavaScript для Safari</h1>
+<section aria-labelledby="ocr118heading" style="border:1px solid #526a9d;border-radius:14px;padding:15px;margin:16px 0 22px">
+<h2 id="ocr118heading" style="margin-top:0">Document Reader 3.118 · OCR-закладка</h2>
+<p>Новая плавающая панель для чтения выбранных изображений. Локальный OCR, без входа и API-ключа. Не решает тесты и не считывает содержимое открытой страницы автоматически.</p>
+<label for="code118" class="small">JavaScript закладки 3.118</label>
+<textarea id="code118" readonly spellcheck="false" autocapitalize="off" autocorrect="off">javascript:(function()%7B'use%20strict'%3Bconst%20ID%3D'scanner-document-reader-3118'%2Cold%3Ddocument.getElementById(ID)%3Bif(old)%7Bold.remove()%3Breturn%7Dconst%20host%3Ddocument.createElement('div')%3Bhost.id%3DID%3Bhost.style.cssText%3D'all%3Ainitial%3Bposition%3Afixed%3Bz-index%3A2147483647%3Bright%3A8px%3Btop%3A12px%3Bwidth%3Amin(390px%2Ccalc(100vw%20-%2016px))%3Bheight%3Amin(650px%2Ccalc(100vh%20-%2024px))%3Bheight%3Amin(650px%2Ccalc(100dvh%20-%2024px))%3Bdisplay%3Ablock%3B'%3Bconst%20shadow%3Dhost.attachShadow(%7Bmode%3A'closed'%7D)%3Bconst%20box%3Ddocument.createElement('div')%3Bbox.style.cssText%3D'height%3A100%25%3Bdisplay%3Aflex%3Bflex-direction%3Acolumn%3Boverflow%3Ahidden%3Bbackground%3A%23111827%3Bborder%3A1px%20solid%20%2343516e%3Bborder-radius%3A14px%3Bbox-shadow%3A0%208px%2028px%20%230008%3Bfont%3A14px%20system-ui%2Csans-serif%3Bcolor%3A%23edf2ff%3Bbox-sizing%3Aborder-box%3B'%3Bconst%20header%3Ddocument.createElement('div')%3Bheader.style.cssText%3D'display%3Aflex%3Bgap%3A8px%3Balign-items%3Acenter%3Bjustify-content%3Aspace-between%3Bpadding%3A8px%3Bbackground%3A%2324334a%3B'%3Bconst%20title%3Ddocument.createElement('span')%3Btitle.textContent%3D'Document%20Reader%203.118'%3Bconst%20close%3Ddocument.createElement('button')%3Bclose.type%3D'button'%3Bclose.textContent%3D'%C3%97'%3Bclose.setAttribute('aria-label'%2C'%D0%97%D0%B0%D0%BA%D1%80%D1%8B%D1%82%D1%8C')%3Bclose.style.cssText%3D'background%3A%2343516e%3Bcolor%3Awhite%3Bborder%3A0%3Bborder-radius%3A8px%3Bfont%3A24px%20system-ui%3Bwidth%3A44px%3Bheight%3A44px%3Bcursor%3Apointer%3B'%3Bclose.onclick%3D()%3D%3Ehost.remove()%3Bheader.append(title%2Cclose)%3Bconst%20frame%3Ddocument.createElement('iframe')%3Bframe.title%3D'Document%20Reader%203.118'%3Bframe.src%3D'https%3A%2F%2Fmuyylx.github.io%2Fstudy-overlay%2Fscanner-cloud%2Fdocument-reader-3.118.html'%3Bframe.referrerPolicy%3D'no-referrer'%3Bframe.setAttribute('sandbox'%2C'allow-scripts%20allow-same-origin%20allow-downloads')%3Bframe.setAttribute('allow'%2C'clipboard-write')%3Bframe.style.cssText%3D'border%3A0%3Bdisplay%3Ablock%3Bwidth%3A100%25%3Bflex%3A1%3Bmin-height%3A0%3Bbackground%3A%23111827%3B'%3Bbox.append(header%2Cframe)%3Bshadow.append(box)%3B(document.body%7C%7Cdocument.documentElement).append(host)%7D)()%3B</textarea>
+<div class="actions"><button id="copy118" type="button">Скопировать JavaScript 3.118</button><button id="select118" class="secondary" type="button">Выделить код 3.118</button></div>
+<p id="status118" role="status" aria-live="polite" class="small">Код готов. Вставь его в адрес отдельной закладки Safari. При запуске появится окно с кнопкой закрытия.</p>
+<p class="small">Предварительная версия: некоторые сайты блокируют iframe. Если панель не загрузилась, <a href="./document-reader-3.118.html">открой OCR отдельно</a>. На реальном iPhone пока не проверено.</p>
+</section><h2>Прежняя закладка 3.117</h2>
 <p class="lead">Это <strong>обычная пользовательская закладка 3.117</strong>. Она открывает панель Scanner Access на странице. Для входа нужен код активации, выданный администратором.</p>
 
 <div class="status" id="status" role="status" aria-live="polite">Загружаю актуальный JavaScript…</div>
@@ -50,7 +59,7 @@ strong{color:white}
 <p class="small"><strong>Что нового в 3.117:</strong> «📷 Лист на странице» пытается прочитать учебное изображение напрямую, а «📄 Считать текст с фото» открывает скриншот из галереи. Если PNG помещается в лимит, текст не ухудшается JPEG-сжатием. Повторное чтение точно того же снимка использует результат в памяти до закрытия панели.</p>
 <p class="small"><strong>3.117:</strong> улучшена обработка выбранных фотографий и проверка формата OCR. Оборванный текст и некорректный ответ модели теперь отмечаются как ошибки, а не как успешное распознавание. Точность распознанного текста необходимо проверять по оригиналу.</p>
 <p class="small"><strong>3.117:</strong> версия установленного JavaScript теперь отображается внизу панели. Обработка изображений со страницы переведена на асинхронное кодирование; поздние ответы от предыдущих запросов OCR игнорируются. Целевое время 5–8 секунд не является гарантией скорости внешней модели.</p>
-<p class="small"><strong>Document Reader 3.118 (предварительная версия):</strong> <a href="./document-reader-3.118.html">Открыть отдельный локальный OCR для фотографий документов</a>. Без API-ключа и регистрации. Действующая Safari-закладка остаётся 3.117. Не используйте её на недоверенных сайтах: прежний механизм входа может сохранять токен в хранилище посещаемого сайта.</p>
+<p class="small"><strong>Document Reader 3.118 (предварительная версия):</strong> <a href="./document-reader-3.118.html">Открыть отдельный локальный OCR для фотографий документов</a>. Без API-ключа и регистрации. Действующая основная Safari-закладка остаётся 3.117; новый отдельный OCR доступен в закладке 3.118 выше. Не используйте её на недоверенных сайтах: прежний механизм входа может сохранять токен в хранилище посещаемого сайта.</p>
 <h2>Как установить на iPhone</h2>
 <ol>
 <li>Нажми <strong>«Скопировать JavaScript»</strong>.</li>
@@ -113,6 +122,10 @@ select.addEventListener('click',()=>{
  if(!current)return;selectAll();
  say('Весь код выделен. Выбери «Копировать» в меню Safari.');
 });
+const field118=document.getElementById('code118'),status118=document.getElementById('status118');
+function select118(){field118.focus();field118.select();try{field118.setSelectionRange(0,field118.value.length)}catch(_){}}
+document.getElementById('select118').onclick=()=>{select118();status118.textContent='Код 3.118 выделен. Выбери «Копировать» в Safari.'};
+document.getElementById('copy118').onclick=async()=>{try{await navigator.clipboard.writeText(field118.value);status118.textContent='Код 3.118 скопирован.'}catch(_){select118();let ok=false;try{ok=document.execCommand('copy')}catch(_){}status118.textContent=ok?'Код 3.118 скопирован.':'Код выделен. Выбери «Копировать» в меню Safari.'}};
 reload.addEventListener('click',load);
 load();
 </script>
