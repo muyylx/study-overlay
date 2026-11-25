@@ -1,0 +1,1 @@
+javascript:(function(){if(typeof window.scannerPractice!=="function"||!document.querySelector("meta[name=scanner-local-practice][content=3120-r2]")){alert("Откройте локальную учебную страницу Scanner 3.120 R2");return;}window.scannerPractice(true);})();
